@@ -94,13 +94,19 @@ class ViewController: UIViewController {
         view.addSubview(btnEntrar)
        
         // 7. TEXTO DE REGISTRO (Rojo y centrado como el mockup)
-        let lblRegistro = UILabel()
-        lblRegistro.text = "¿No tienes cuenta? Regístrate"
-        lblRegistro.font = .systemFont(ofSize: 15, weight: .bold)
-        lblRegistro.textColor = .systemRed
-        lblRegistro.textAlignment = .center
-        lblRegistro.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(lblRegistro)
+        // 7. BOTÓN DE REGISTRO (Ahora sí funciona)
+            let btnHaciaRegistro = UIButton(type: .system)
+            let tituloRegistro = "¿No tienes cuenta? Regístrate"
+           
+            // Le ponemos el estilo para que se vea igual al mockup
+            btnHaciaRegistro.setTitle(tituloRegistro, for: .normal)
+            btnHaciaRegistro.setTitleColor(.systemRed, for: .normal)
+            btnHaciaRegistro.titleLabel?.font = .systemFont(ofSize: 15, weight: .bold)
+            btnHaciaRegistro.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(btnHaciaRegistro)
+           
+            // LA MAGIA: Aquí le decimos qué hacer al tocarlo
+            btnHaciaRegistro.addTarget(self, action: #selector(accionHaciaRegistro), for: .touchUpInside)
        
         // --- CONSTRAINTS (Alineación exacta) ---
         NSLayoutConstraint.activate([
@@ -133,9 +139,91 @@ class ViewController: UIViewController {
             btnEntrar.heightAnchor.constraint(equalToConstant: 55),
            
             // Texto de registro final
-            lblRegistro.topAnchor.constraint(equalTo: btnEntrar.bottomAnchor, constant: 30),
-            lblRegistro.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+            btnHaciaRegistro.topAnchor.constraint(equalTo: btnEntrar.bottomAnchor, constant: 30),
+            btnHaciaRegistro.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ])
     }
     
+    
+    @objc func accionHaciaRegistro() {
+            print("Cambiando a pantalla de Registro...")
+            irARegistro()
+        }
+    
+    
+    @objc func accionHaciaLogin() {
+        print("Regresando al Login...")
+        irALogin()
+    }
+    
+    
+    
+    
+    
+    func irARegistro() {
+        // 1. Limpiar pantalla
+        view.subviews.forEach({ $0.removeFromSuperview() })
+        view.backgroundColor = .white
+       
+        // 2. Título "Crear cuenta"
+        let lblTitulo = UILabel()
+        lblTitulo.text = "Crear cuenta"
+        lblTitulo.font = .systemFont(ofSize: 28, weight: .bold)
+        lblTitulo.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(lblTitulo)
+       
+        // 3. StackView (Para que los campos queden bien ordenaditos)
+        let stackFields = UIStackView()
+        stackFields.axis = .vertical
+        stackFields.spacing = 15
+        stackFields.distribution = .fillEqually
+        stackFields.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(stackFields)
+       
+        // 4. Crear los 4 campos (TextFields)
+        let placeholders = ["Nombre", "Correo", "Contraseña", "Confirmar contraseña"]
+        for p in placeholders {
+            let txt = UITextField()
+            txt.placeholder = p
+            txt.borderStyle = .roundedRect
+            if p.contains("Contraseña") { txt.isSecureTextEntry = true }
+            stackFields.addArrangedSubview(txt)
+        }
+       
+        // 5. Botón Registrar (Rojo)
+        let btnRegistrar = UIButton(type: .system)
+        btnRegistrar.setTitle("Registrar", for: .normal)
+        btnRegistrar.backgroundColor = .systemRed
+        btnRegistrar.setTitleColor(.white, for: .normal)
+        btnRegistrar.layer.cornerRadius = 20
+        btnRegistrar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(btnRegistrar)
+       
+        // 6. Texto "Ya tengo una cuenta"
+        let btnVolver = UIButton(type: .system)
+        btnVolver.setTitle("Ya tengo una cuenta", for: .normal)
+        btnVolver.setTitleColor(.black, for: .normal)
+        btnVolver.titleLabel?.font = .systemFont(ofSize: 14)
+        btnVolver.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(btnVolver)
+        btnVolver.addTarget(self, action: #selector(accionHaciaLogin), for: .touchUpInside)
+       
+        // --- CONSTRAINTS ---
+        NSLayoutConstraint.activate([
+            lblTitulo.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
+            lblTitulo.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+           
+            stackFields.topAnchor.constraint(equalTo: lblTitulo.bottomAnchor, constant: 40),
+            stackFields.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
+            stackFields.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
+           
+            btnRegistrar.topAnchor.constraint(equalTo: stackFields.bottomAnchor, constant: 30),
+            btnRegistrar.leadingAnchor.constraint(equalTo: stackFields.leadingAnchor),
+            btnRegistrar.trailingAnchor.constraint(equalTo: stackFields.trailingAnchor),
+            btnRegistrar.heightAnchor.constraint(equalToConstant: 50),
+           
+            btnVolver.topAnchor.constraint(equalTo: btnRegistrar.bottomAnchor, constant: 20),
+            btnVolver.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+        ])
+    }
 }
