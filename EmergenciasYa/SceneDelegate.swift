@@ -16,7 +16,20 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Use this method to optionally configure and attach the UIWindow `window` to the provided UIWindowScene `scene`.
         // If using a storyboard, the `window` property will automatically be initialized and attached to the scene.
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
-        guard let _ = (scene as? UIWindowScene) else { return }
+        // 1. Configuramos la escena de la ventana
+        guard let windowScene = (scene as? UIWindowScene) else { return }
+        
+        // 2. Creamos la ventana y le damos el tamaño de la pantalla
+        let window = UIWindow(windowScene: windowScene)
+        
+        // 3. Apuntamos al ViewController (tu código del Splash) 
+        // Como estamos haciendo todo por código, instanciamos la clase directamente
+        let rootVC = ViewController()
+        
+        // 4. Ponemos el Splash como la pantalla principal
+        window.rootViewController = rootVC
+        self.window = window
+        window.makeKeyAndVisible()
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {
