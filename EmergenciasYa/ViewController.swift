@@ -132,6 +132,11 @@ class ViewController: UIViewController {
         print("Navegando a Contactos de Confianza...")
         irAContactos()
     }
+
+    @objc func accionHaciaUbicacion() {
+        print("Navegando a Compartir Ubicación...")
+        irAUbicacion()
+    }
    
     // --- PANTALLAS ---
    
@@ -245,6 +250,9 @@ class ViewController: UIViewController {
                 vistaBoton.addGestureRecognizer(tap)
             } else if titulo == "Contactos de Confianza" {
                 let tap = UITapGestureRecognizer(target: self, action: #selector(accionHaciaContactos))
+                vistaBoton.addGestureRecognizer(tap)
+            } else if titulo == "Compartir Ubicación" {
+                let tap = UITapGestureRecognizer(target: self, action: #selector(accionHaciaUbicacion))
                 vistaBoton.addGestureRecognizer(tap)
             }
             stackOpciones.addArrangedSubview(vistaBoton)
@@ -479,6 +487,93 @@ class ViewController: UIViewController {
             btnAdd.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
             btnAdd.widthAnchor.constraint(equalToConstant: 56),
             btnAdd.heightAnchor.constraint(equalToConstant: 56)
+        ])
+    }
+
+    func irAUbicacion() {
+        view.subviews.forEach({ $0.removeFromSuperview() })
+        view.backgroundColor = .white
+       
+        let vistaPanel = UIView()
+        vistaPanel.backgroundColor = .white
+        vistaPanel.layer.cornerRadius = 25
+        vistaPanel.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+        vistaPanel.layer.shadowColor = UIColor.black.cgColor
+        vistaPanel.layer.shadowOpacity = 0.1
+        vistaPanel.layer.shadowOffset = CGSize(width: 0, height: -3)
+        vistaPanel.layer.shadowRadius = 10
+        vistaPanel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(vistaPanel)
+       
+        let vistaHeader = UIView()
+        vistaHeader.backgroundColor = .systemRed
+        vistaHeader.layer.cornerRadius = 25
+        vistaHeader.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+        vistaHeader.translatesAutoresizingMaskIntoConstraints = false
+        vistaPanel.addSubview(vistaHeader)
+       
+        let btnBack = UIButton(type: .system)
+        btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
+        btnBack.tintColor = .white
+        btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
+        btnBack.translatesAutoresizingMaskIntoConstraints = false
+        vistaHeader.addSubview(btnBack)
+       
+        let lblTitulo = UILabel()
+        lblTitulo.text = "Compartir Ubicación"
+        lblTitulo.textColor = .white
+        lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
+        lblTitulo.translatesAutoresizingMaskIntoConstraints = false
+        vistaHeader.addSubview(lblTitulo)
+       
+        let imgUbicacion = UIImageView(image: UIImage(systemName: "mappin.and.ellipse"))
+        imgUbicacion.tintColor = .systemRed
+        imgUbicacion.contentMode = .scaleAspectFit
+        imgUbicacion.translatesAutoresizingMaskIntoConstraints = false
+        vistaPanel.addSubview(imgUbicacion)
+       
+        let lblMensaje = UILabel()
+        lblMensaje.text = "Para enviar tu ubicación, presiona el botón de abajo."
+        lblMensaje.numberOfLines = 0
+        lblMensaje.textAlignment = .center
+        lblMensaje.font = .systemFont(ofSize: 16)
+        lblMensaje.textColor = .gray
+        lblMensaje.translatesAutoresizingMaskIntoConstraints = false
+        vistaPanel.addSubview(lblMensaje)
+       
+        let btnEnviar = UIButton(type: .system)
+        btnEnviar.setTitle("Enviar Ubicación Actual", for: .normal)
+        btnEnviar.backgroundColor = .systemRed
+        btnEnviar.setTitleColor(.white, for: .normal)
+        btnEnviar.titleLabel?.font = .systemFont(ofSize: 18, weight: .bold)
+        btnEnviar.layer.cornerRadius = 25
+        btnEnviar.translatesAutoresizingMaskIntoConstraints = false
+        vistaPanel.addSubview(btnEnviar)
+       
+        NSLayoutConstraint.activate([
+            vistaPanel.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            vistaPanel.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            vistaPanel.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            vistaPanel.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.45),
+            vistaHeader.topAnchor.constraint(equalTo: vistaPanel.topAnchor),
+            vistaHeader.leadingAnchor.constraint(equalTo: vistaPanel.leadingAnchor),
+            vistaHeader.trailingAnchor.constraint(equalTo: vistaPanel.trailingAnchor),
+            vistaHeader.heightAnchor.constraint(equalToConstant: 80),
+            btnBack.leadingAnchor.constraint(equalTo: vistaHeader.leadingAnchor, constant: 20),
+            btnBack.centerYAnchor.constraint(equalTo: vistaHeader.centerYAnchor),
+            lblTitulo.centerYAnchor.constraint(equalTo: btnBack.centerYAnchor),
+            lblTitulo.leadingAnchor.constraint(equalTo: btnBack.trailingAnchor, constant: 15),
+            imgUbicacion.centerXAnchor.constraint(equalTo: vistaPanel.centerXAnchor),
+            imgUbicacion.topAnchor.constraint(equalTo: vistaHeader.bottomAnchor, constant: 30),
+            imgUbicacion.widthAnchor.constraint(equalToConstant: 70),
+            imgUbicacion.heightAnchor.constraint(equalToConstant: 70),
+            lblMensaje.topAnchor.constraint(equalTo: imgUbicacion.bottomAnchor, constant: 20),
+            lblMensaje.leadingAnchor.constraint(equalTo: vistaPanel.leadingAnchor, constant: 40),
+            lblMensaje.trailingAnchor.constraint(equalTo: vistaPanel.trailingAnchor, constant: -40),
+            btnEnviar.bottomAnchor.constraint(equalTo: vistaPanel.bottomAnchor, constant: -40),
+            btnEnviar.centerXAnchor.constraint(equalTo: vistaPanel.centerXAnchor),
+            btnEnviar.widthAnchor.constraint(equalTo: vistaPanel.widthAnchor, multiplier: 0.7),
+            btnEnviar.heightAnchor.constraint(equalToConstant: 55)
         ])
     }
 
