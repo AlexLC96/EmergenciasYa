@@ -137,6 +137,11 @@ class ViewController: UIViewController {
         print("Navegando a Compartir Ubicación...")
         irAUbicacion()
     }
+
+    @objc func accionHaciaIncidentes() {
+        print("Navegando a Registro de Incidentes...")
+        irAIncidentes()
+    }
    
     // --- PANTALLAS ---
    
@@ -254,6 +259,9 @@ class ViewController: UIViewController {
             } else if titulo == "Compartir Ubicación" {
                 let tap = UITapGestureRecognizer(target: self, action: #selector(accionHaciaUbicacion))
                 vistaBoton.addGestureRecognizer(tap)
+            } else if titulo == "Registro de incidentes" {
+                let tap = UITapGestureRecognizer(target: self, action: #selector(accionHaciaIncidentes))
+                vistaBoton.addGestureRecognizer(tap)
             }
             stackOpciones.addArrangedSubview(vistaBoton)
         }
@@ -358,8 +366,7 @@ class ViewController: UIViewController {
        
         let leftIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
         leftIcon.tintColor = .gray
-        // CORRECCIÓN: Usamos width en lugar de constant
-        txtBuscar.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 30, height: 20))
+        txtBuscar.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 30, height: 20)) // Corregido
         txtBuscar.leftViewMode = .always
         view.addSubview(txtBuscar)
        
@@ -577,6 +584,100 @@ class ViewController: UIViewController {
         ])
     }
 
+    func irAIncidentes() {
+        view.subviews.forEach({ $0.removeFromSuperview() })
+        view.backgroundColor = UIColor(white: 0.98, alpha: 1.0)
+       
+        let vistaHeader = UIView()
+        vistaHeader.backgroundColor = .systemRed
+        vistaHeader.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(vistaHeader)
+       
+        let btnBack = UIButton(type: .system)
+        btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
+        btnBack.tintColor = .white
+        btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
+        btnBack.translatesAutoresizingMaskIntoConstraints = false
+        vistaHeader.addSubview(btnBack)
+       
+        let lblTitulo = UILabel()
+        lblTitulo.text = "Registro de incidentes"
+        lblTitulo.textColor = .white
+        lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
+        lblTitulo.translatesAutoresizingMaskIntoConstraints = false
+        vistaHeader.addSubview(lblTitulo)
+       
+        let scrollView = UIScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(scrollView)
+       
+        let stackCampos = UIStackView()
+        stackCampos.axis = .vertical
+        stackCampos.spacing = 15
+        stackCampos.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.addSubview(stackCampos)
+       
+        let txtTitulo = crearCampoTexto(p: "Título del incidente")
+        let txtUbi = crearCampoTexto(p: "Ubicación (opcional)")
+       
+        let txtDesc = UITextView()
+        txtDesc.text = "Descripción del incidente"
+        txtDesc.textColor = .lightGray
+        txtDesc.font = .systemFont(ofSize: 16)
+        txtDesc.layer.borderWidth = 1
+        txtDesc.layer.borderColor = UIColor.systemGray4.cgColor
+        txtDesc.layer.cornerRadius = 8
+        txtDesc.translatesAutoresizingMaskIntoConstraints = false
+        txtDesc.heightAnchor.constraint(equalToConstant: 100).isActive = true
+       
+        let btnGuardar = UIButton(type: .system)
+        btnGuardar.setTitle("Guardar incidente", for: .normal)
+        btnGuardar.backgroundColor = .systemRed
+        btnGuardar.setTitleColor(.white, for: .normal)
+        btnGuardar.titleLabel?.font = .systemFont(ofSize: 16, weight: .bold)
+        btnGuardar.layer.cornerRadius = 25
+        btnGuardar.translatesAutoresizingMaskIntoConstraints = false
+        btnGuardar.heightAnchor.constraint(equalToConstant: 50).isActive = true
+       
+        stackCampos.addArrangedSubview(txtTitulo)
+        stackCampos.addArrangedSubview(txtUbi)
+        stackCampos.addArrangedSubview(txtDesc)
+        stackCampos.addArrangedSubview(btnGuardar)
+       
+        let lblHistorial = UILabel()
+        lblHistorial.text = "Incidentes recientes"
+        lblHistorial.font = .systemFont(ofSize: 18, weight: .bold)
+        lblHistorial.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.addSubview(lblHistorial)
+       
+        let cardIncidente = crearTarjetaIncidente(titulo: "Incidente", desc: "Descripción", fecha: "18/02/2026 10:15", ubi: "Santa Ana")
+        scrollView.addSubview(cardIncidente)
+       
+        NSLayoutConstraint.activate([
+            vistaHeader.topAnchor.constraint(equalTo: view.topAnchor),
+            vistaHeader.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            vistaHeader.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            vistaHeader.heightAnchor.constraint(equalToConstant: 110),
+            btnBack.leadingAnchor.constraint(equalTo: vistaHeader.leadingAnchor, constant: 20),
+            btnBack.bottomAnchor.constraint(equalTo: vistaHeader.bottomAnchor, constant: -15),
+            lblTitulo.centerYAnchor.constraint(equalTo: btnBack.centerYAnchor),
+            lblTitulo.leadingAnchor.constraint(equalTo: btnBack.trailingAnchor, constant: 15),
+            scrollView.topAnchor.constraint(equalTo: vistaHeader.bottomAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            stackCampos.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 20),
+            stackCampos.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            stackCampos.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            lblHistorial.topAnchor.constraint(equalTo: stackCampos.bottomAnchor, constant: 30),
+            lblHistorial.leadingAnchor.constraint(equalTo: stackCampos.leadingAnchor),
+            cardIncidente.topAnchor.constraint(equalTo: lblHistorial.bottomAnchor, constant: 15),
+            cardIncidente.leadingAnchor.constraint(equalTo: stackCampos.leadingAnchor),
+            cardIncidente.trailingAnchor.constraint(equalTo: stackCampos.trailingAnchor),
+            cardIncidente.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -20)
+        ])
+    }
+
     func crearCeldaGuia(icono: String, titulo: String, subtitulo: String) -> UIView {
         let vista = UIView()
         vista.backgroundColor = .white
@@ -756,6 +857,84 @@ class ViewController: UIViewController {
     }
    
     // --- FUNCIONES AUXILIARES ---
+    func crearCampoTexto(p: String) -> UITextField {
+        let t = UITextField()
+        t.placeholder = p
+        t.borderStyle = .roundedRect
+        t.font = .systemFont(ofSize: 16)
+        t.translatesAutoresizingMaskIntoConstraints = false
+        t.heightAnchor.constraint(equalToConstant: 45).isActive = true
+        return t
+    }
+
+    func crearTarjetaIncidente(titulo: String, desc: String, fecha: String, ubi: String) -> UIView {
+        let vista = UIView()
+        vista.backgroundColor = .white
+        vista.layer.cornerRadius = 15
+        vista.layer.shadowColor = UIColor.black.cgColor
+        vista.layer.shadowOpacity = 0.1
+        vista.layer.shadowOffset = CGSize(width: 0, height: 2)
+        vista.translatesAutoresizingMaskIntoConstraints = false
+        let icono = UIImageView(image: UIImage(systemName: "list.bullet.rectangle.fill"))
+        icono.tintColor = .systemRed
+        icono.translatesAutoresizingMaskIntoConstraints = false
+        let lblT = UILabel()
+        lblT.text = titulo
+        lblT.font = .systemFont(ofSize: 17, weight: .bold)
+        lblT.translatesAutoresizingMaskIntoConstraints = false
+        let lblD = UILabel()
+        lblD.text = desc
+        lblD.font = .systemFont(ofSize: 14)
+        lblD.textColor = .gray
+        lblD.translatesAutoresizingMaskIntoConstraints = false
+        let separador = UIView()
+        separador.backgroundColor = .systemGray5
+        separador.translatesAutoresizingMaskIntoConstraints = false
+        let lblF = UILabel()
+        lblF.text = "📅 \(fecha)"
+        lblF.font = .systemFont(ofSize: 13)
+        lblF.textColor = .darkGray
+        lblF.translatesAutoresizingMaskIntoConstraints = false
+        let lblU = UILabel()
+        lblU.text = "📍 Ubicación: \(ubi)"
+        lblU.font = .systemFont(ofSize: 13)
+        lblU.textColor = .darkGray
+        lblU.translatesAutoresizingMaskIntoConstraints = false
+        let btnTrash = UIButton(type: .system)
+        btnTrash.setImage(UIImage(systemName: "trash"), for: .normal)
+        btnTrash.tintColor = .systemRed
+        btnTrash.translatesAutoresizingMaskIntoConstraints = false
+        vista.addSubview(icono)
+        vista.addSubview(lblT)
+        vista.addSubview(lblD)
+        vista.addSubview(separador)
+        vista.addSubview(lblF)
+        vista.addSubview(lblU)
+        vista.addSubview(btnTrash)
+        NSLayoutConstraint.activate([
+            icono.leadingAnchor.constraint(equalTo: vista.leadingAnchor, constant: 15),
+            icono.topAnchor.constraint(equalTo: vista.topAnchor, constant: 15),
+            icono.widthAnchor.constraint(equalToConstant: 40),
+            icono.heightAnchor.constraint(equalToConstant: 40),
+            lblT.leadingAnchor.constraint(equalTo: icono.trailingAnchor, constant: 12),
+            lblT.topAnchor.constraint(equalTo: icono.topAnchor),
+            btnTrash.trailingAnchor.constraint(equalTo: vista.trailingAnchor, constant: -15),
+            btnTrash.centerYAnchor.constraint(equalTo: lblT.centerYAnchor),
+            lblD.leadingAnchor.constraint(equalTo: lblT.leadingAnchor),
+            lblD.topAnchor.constraint(equalTo: lblT.bottomAnchor, constant: 2),
+            separador.topAnchor.constraint(equalTo: icono.bottomAnchor, constant: 15),
+            separador.leadingAnchor.constraint(equalTo: vista.leadingAnchor, constant: 15),
+            separador.trailingAnchor.constraint(equalTo: vista.trailingAnchor, constant: -15),
+            separador.heightAnchor.constraint(equalToConstant: 1),
+            lblF.topAnchor.constraint(equalTo: separador.bottomAnchor, constant: 10),
+            lblF.leadingAnchor.constraint(equalTo: separador.leadingAnchor),
+            lblU.topAnchor.constraint(equalTo: lblF.bottomAnchor, constant: 5),
+            lblU.leadingAnchor.constraint(equalTo: lblF.leadingAnchor),
+            lblU.bottomAnchor.constraint(equalTo: vista.bottomAnchor, constant: -15)
+        ])
+        return vista
+    }
+
     func crearEtiquetaSeccion(texto: String) -> UILabel {
         let lbl = UILabel()
         lbl.text = texto
