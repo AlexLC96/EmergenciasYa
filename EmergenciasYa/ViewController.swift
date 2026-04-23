@@ -122,6 +122,11 @@ class ViewController: UIViewController {
         print("Cambiando a pantalla de Números de Emergencia...")
         irAEmergNums()
     }
+
+    @objc func accionHaciaFirstAid() {
+        print("Abriendo Guía de Primeros Auxilios...")
+        irAFirstAid()
+    }
    
     // --- PANTALLAS ---
    
@@ -225,9 +230,15 @@ class ViewController: UIViewController {
        
         for (icono, titulo, color) in datos {
             let vistaBoton = crearBotonOpcion(icono: icono, titulo: titulo, colorIcono: color)
-            // LA MAGIA: Si el título es el de números, le ponemos su acción
+           
+            // Forzamos la interacción para que detecte el TapGesture
+            vistaBoton.isUserInteractionEnabled = true
+           
             if titulo == "Números De Emergencia" {
                 let tap = UITapGestureRecognizer(target: self, action: #selector(accionHaciaEmergNums))
+                vistaBoton.addGestureRecognizer(tap)
+            } else if titulo == "Primeros Auxilios" {
+                let tap = UITapGestureRecognizer(target: self, action: #selector(accionHaciaFirstAid))
                 vistaBoton.addGestureRecognizer(tap)
             }
             stackOpciones.addArrangedSubview(vistaBoton)
@@ -248,49 +259,36 @@ class ViewController: UIViewController {
     }
 
     func irAEmergNums() {
-        // 1. Limpieza y fondo
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.98, alpha: 1.0)
-       
-        // 2. TÍTULO SUPERIOR
         let lblTitulo = UILabel()
         lblTitulo.text = "Números de Emergencia"
         lblTitulo.font = .systemFont(ofSize: 24, weight: .bold)
         lblTitulo.textAlignment = .center
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(lblTitulo)
-       
-        // Botón Volver
         let btnBack = UIButton(type: .system)
         btnBack.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         btnBack.tintColor = .black
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnBack)
-       
-        // 3. STACK VIEW PRINCIPAL (GRID)
         let stackPrincipal = UIStackView()
         stackPrincipal.axis = .vertical
         stackPrincipal.spacing = 15
         stackPrincipal.distribution = .fillEqually
         stackPrincipal.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stackPrincipal)
-       
-        // 4. DATOS (Imagen, Título Corto, Color Pastel)
         let filas = [
             [("LogoPolicia", "PNC", UIColor(red: 0.82, green: 0.91, blue: 1.0, alpha: 1.0)),
              ("LogoBomberos", "Bomberos", UIColor(red: 1.0, green: 0.85, blue: 0.85, alpha: 1.0))],
-           
             [("LogoCruzRoja", "Cruz Roja", UIColor(red: 1.0, green: 0.88, blue: 0.82, alpha: 1.0)),
              ("LogoCruzVerde", "Cruz Verde", UIColor(red: 0.85, green: 0.95, blue: 0.85, alpha: 1.0))],
-           
             [("LogoSalvamento", "Comandos de Salvamento", UIColor(red: 1.0, green: 1.0, blue: 0.85, alpha: 1.0)),
              ("LogoProtCivil", "Protección Civil", UIColor(red: 1.0, green: 0.92, blue: 0.8, alpha: 1.0))],
-           
             [("LogoAE", "AES", UIColor(red: 0.92, green: 0.88, blue: 1.0, alpha: 1.0)),
              ("Logo123", "Sistema de Emergencias Médicas", UIColor(red: 0.85, green: 0.95, blue: 1.0, alpha: 1.0))]
         ]
-       
         for datosFila in filas {
             let stackH = UIStackView()
             stackH.axis = .horizontal
@@ -302,7 +300,6 @@ class ViewController: UIViewController {
             }
             stackPrincipal.addArrangedSubview(stackH)
         }
-       
         NSLayoutConstraint.activate([
             btnBack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
             btnBack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
@@ -315,27 +312,153 @@ class ViewController: UIViewController {
         ])
     }
 
+    func irAFirstAid() {
+        view.subviews.forEach({ $0.removeFromSuperview() })
+        view.backgroundColor = UIColor(white: 0.97, alpha: 1.0)
+       
+        let vistaHeader = UIView()
+        vistaHeader.backgroundColor = .systemRed
+        vistaHeader.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(vistaHeader)
+       
+        let btnBack = UIButton(type: .system)
+        btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
+        btnBack.tintColor = .white
+        btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
+        btnBack.translatesAutoresizingMaskIntoConstraints = false
+        vistaHeader.addSubview(btnBack)
+       
+        let lblTitulo = UILabel()
+        lblTitulo.text = "Guía de Primeros Auxilios"
+        lblTitulo.textColor = .white
+        lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
+        lblTitulo.translatesAutoresizingMaskIntoConstraints = false
+        vistaHeader.addSubview(lblTitulo)
+       
+        let txtBuscar = UITextField()
+        txtBuscar.placeholder = "Buscar una situación..."
+        txtBuscar.backgroundColor = .white
+        txtBuscar.borderStyle = .roundedRect
+        txtBuscar.layer.cornerRadius = 10
+        txtBuscar.translatesAutoresizingMaskIntoConstraints = false
+        let leftIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
+        leftIcon.tintColor = .gray
+        txtBuscar.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 30, height: 20))
+        txtBuscar.leftViewMode = .always
+        view.addSubview(txtBuscar)
+       
+        let scrollView = UIScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(scrollView)
+       
+        let stackContenido = UIStackView()
+        stackContenido.axis = .vertical
+        stackContenido.spacing = 15
+        stackContenido.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.addSubview(stackContenido)
+       
+        let guias = [
+            ("flame.fill", "Quemaduras", "Acciones básicas en caso de quemaduras."),
+            ("heart.fill", "RCP Básica", "Reanimación cardiopulmonar para adultos."),
+            ("figure.stand", "Fracturas", "Inmovilización y cuidados ante una posible fractura."),
+            ("fork.knife", "Atragantamiento (Heimlich)", "Cómo actuar ante una obstrucción de la vía aérea."),
+            ("drop.fill", "Hemorragias", "Cómo detener una hemorragia externa.")
+        ]
+       
+        for (icono, titulo, sub) in guias {
+            let celda = crearCeldaGuia(icono: icono, titulo: titulo, subtitulo: sub)
+            stackContenido.addArrangedSubview(celda)
+        }
+       
+        NSLayoutConstraint.activate([
+            vistaHeader.topAnchor.constraint(equalTo: view.topAnchor),
+            vistaHeader.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            vistaHeader.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            vistaHeader.heightAnchor.constraint(equalToConstant: 110),
+            btnBack.leadingAnchor.constraint(equalTo: vistaHeader.leadingAnchor, constant: 20),
+            btnBack.bottomAnchor.constraint(equalTo: vistaHeader.bottomAnchor, constant: -15),
+            lblTitulo.centerYAnchor.constraint(equalTo: btnBack.centerYAnchor),
+            lblTitulo.leadingAnchor.constraint(equalTo: btnBack.trailingAnchor, constant: 15),
+            txtBuscar.topAnchor.constraint(equalTo: vistaHeader.bottomAnchor, constant: 20),
+            txtBuscar.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            txtBuscar.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            txtBuscar.heightAnchor.constraint(equalToConstant: 45),
+            scrollView.topAnchor.constraint(equalTo: txtBuscar.bottomAnchor, constant: 20),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            stackContenido.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            stackContenido.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 20),
+            stackContenido.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -20),
+            stackContenido.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -20),
+            stackContenido.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40)
+        ])
+    }
+
+    func crearCeldaGuia(icono: String, titulo: String, subtitulo: String) -> UIView {
+        let vista = UIView()
+        vista.backgroundColor = .white
+        vista.layer.cornerRadius = 15
+        vista.layer.shadowColor = UIColor.black.cgColor
+        vista.layer.shadowOpacity = 0.1
+        vista.layer.shadowOffset = CGSize(width: 0, height: 2)
+        let imgIcono = UIImageView(image: UIImage(systemName: icono))
+        imgIcono.tintColor = .systemRed
+        imgIcono.contentMode = .scaleAspectFit
+        imgIcono.translatesAutoresizingMaskIntoConstraints = false
+        let lblTitulo = UILabel()
+        lblTitulo.text = titulo
+        lblTitulo.font = .systemFont(ofSize: 17, weight: .bold)
+        lblTitulo.translatesAutoresizingMaskIntoConstraints = false
+        let lblSub = UILabel()
+        lblSub.text = subtitulo
+        lblSub.font = .systemFont(ofSize: 13)
+        lblSub.textColor = .gray
+        lblSub.numberOfLines = 2
+        lblSub.translatesAutoresizingMaskIntoConstraints = false
+        let flecha = UIImageView(image: UIImage(systemName: "arrow.left"))
+        flecha.tintColor = .systemGray4
+        flecha.translatesAutoresizingMaskIntoConstraints = false
+        vista.addSubview(imgIcono)
+        vista.addSubview(lblTitulo)
+        vista.addSubview(lblSub)
+        vista.addSubview(flecha)
+        NSLayoutConstraint.activate([
+            imgIcono.leadingAnchor.constraint(equalTo: vista.leadingAnchor, constant: 15),
+            imgIcono.centerYAnchor.constraint(equalTo: vista.centerYAnchor),
+            imgIcono.widthAnchor.constraint(equalToConstant: 35),
+            imgIcono.heightAnchor.constraint(equalToConstant: 35),
+            lblTitulo.topAnchor.constraint(equalTo: vista.topAnchor, constant: 15),
+            lblTitulo.leadingAnchor.constraint(equalTo: imgIcono.trailingAnchor, constant: 15),
+            lblTitulo.trailingAnchor.constraint(equalTo: flecha.leadingAnchor, constant: -10),
+            lblSub.topAnchor.constraint(equalTo: lblTitulo.bottomAnchor, constant: 4),
+            lblSub.leadingAnchor.constraint(equalTo: lblTitulo.leadingAnchor),
+            lblSub.trailingAnchor.constraint(equalTo: lblTitulo.trailingAnchor),
+            lblSub.bottomAnchor.constraint(equalTo: vista.bottomAnchor, constant: -15),
+            flecha.trailingAnchor.constraint(equalTo: vista.trailingAnchor, constant: -15),
+            flecha.centerYAnchor.constraint(equalTo: vista.centerYAnchor),
+            flecha.widthAnchor.constraint(equalToConstant: 18)
+        ])
+        return vista
+    }
+
     func crearCajonEmergencia(imagen: String, titulo: String, fondo: UIColor) -> UIView {
         let contenedor = UIView()
         contenedor.backgroundColor = fondo
         contenedor.layer.cornerRadius = 20
         contenedor.layer.borderWidth = 1
         contenedor.layer.borderColor = UIColor.black.withAlphaComponent(0.05).cgColor
-       
         let imgView = UIImageView(image: UIImage(named: imagen))
         imgView.contentMode = .scaleAspectFit
         imgView.translatesAutoresizingMaskIntoConstraints = false
-       
         let lbl = UILabel()
         lbl.text = titulo
         lbl.font = .systemFont(ofSize: 13, weight: .bold)
         lbl.textAlignment = .center
         lbl.numberOfLines = 2
         lbl.translatesAutoresizingMaskIntoConstraints = false
-       
         contenedor.addSubview(imgView)
         contenedor.addSubview(lbl)
-       
         NSLayoutConstraint.activate([
             imgView.centerXAnchor.constraint(equalTo: contenedor.centerXAnchor),
             imgView.topAnchor.constraint(equalTo: contenedor.topAnchor, constant: 20),
@@ -421,7 +544,7 @@ class ViewController: UIViewController {
         btnBack.tintColor = .white
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
-        vistaHeader.addSubview(btnBack)
+        view.addSubview(btnBack)
         let stackPrincipal = UIStackView()
         stackPrincipal.axis = .vertical
         stackPrincipal.spacing = 25
