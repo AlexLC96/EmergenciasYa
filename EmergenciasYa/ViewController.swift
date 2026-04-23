@@ -127,6 +127,11 @@ class ViewController: UIViewController {
         print("Abriendo Guía de Primeros Auxilios...")
         irAFirstAid()
     }
+
+    @objc func accionHaciaContactos() {
+        print("Navegando a Contactos de Confianza...")
+        irAContactos()
+    }
    
     // --- PANTALLAS ---
    
@@ -230,8 +235,6 @@ class ViewController: UIViewController {
        
         for (icono, titulo, color) in datos {
             let vistaBoton = crearBotonOpcion(icono: icono, titulo: titulo, colorIcono: color)
-           
-            // Forzamos la interacción para que detecte el TapGesture
             vistaBoton.isUserInteractionEnabled = true
            
             if titulo == "Números De Emergencia" {
@@ -239,6 +242,9 @@ class ViewController: UIViewController {
                 vistaBoton.addGestureRecognizer(tap)
             } else if titulo == "Primeros Auxilios" {
                 let tap = UITapGestureRecognizer(target: self, action: #selector(accionHaciaFirstAid))
+                vistaBoton.addGestureRecognizer(tap)
+            } else if titulo == "Contactos de Confianza" {
+                let tap = UITapGestureRecognizer(target: self, action: #selector(accionHaciaContactos))
                 vistaBoton.addGestureRecognizer(tap)
             }
             stackOpciones.addArrangedSubview(vistaBoton)
@@ -341,8 +347,10 @@ class ViewController: UIViewController {
         txtBuscar.borderStyle = .roundedRect
         txtBuscar.layer.cornerRadius = 10
         txtBuscar.translatesAutoresizingMaskIntoConstraints = false
+       
         let leftIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
         leftIcon.tintColor = .gray
+        // CORRECCIÓN: Usamos width en lugar de constant
         txtBuscar.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 30, height: 20))
         txtBuscar.leftViewMode = .always
         view.addSubview(txtBuscar)
@@ -392,6 +400,85 @@ class ViewController: UIViewController {
             stackContenido.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -20),
             stackContenido.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -20),
             stackContenido.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40)
+        ])
+    }
+
+    func irAContactos() {
+        view.subviews.forEach({ $0.removeFromSuperview() })
+        view.backgroundColor = UIColor(white: 0.98, alpha: 1.0)
+       
+        let vistaHeader = UIView()
+        vistaHeader.backgroundColor = .systemRed
+        vistaHeader.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(vistaHeader)
+       
+        let btnBack = UIButton(type: .system)
+        btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
+        btnBack.tintColor = .white
+        btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
+        btnBack.translatesAutoresizingMaskIntoConstraints = false
+        vistaHeader.addSubview(btnBack)
+       
+        let lblTitulo = UILabel()
+        lblTitulo.text = "Contactos de Confianza"
+        lblTitulo.textColor = .white
+        lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
+        lblTitulo.translatesAutoresizingMaskIntoConstraints = false
+        vistaHeader.addSubview(lblTitulo)
+       
+        let imgVacia = UIImageView(image: UIImage(systemName: "person.crop.circle.badge.plus"))
+        imgVacia.tintColor = .systemGray3
+        imgVacia.contentMode = .scaleAspectFit
+        imgVacia.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(imgVacia)
+       
+        let lblMensaje = UILabel()
+        lblMensaje.text = "No hay contactos de confianza"
+        lblMensaje.font = .systemFont(ofSize: 18, weight: .medium)
+        lblMensaje.textColor = .darkGray
+        lblMensaje.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(lblMensaje)
+       
+        let lblSubMensaje = UILabel()
+        lblSubMensaje.text = "Usa el botón '+' para añadir uno."
+        lblSubMensaje.font = .systemFont(ofSize: 14)
+        lblSubMensaje.textColor = .gray
+        lblSubMensaje.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(lblSubMensaje)
+       
+        let btnAdd = UIButton(type: .custom)
+        btnAdd.backgroundColor = .systemRed
+        btnAdd.setImage(UIImage(systemName: "plus"), for: .normal)
+        btnAdd.tintColor = .white
+        btnAdd.layer.cornerRadius = 28
+        btnAdd.layer.shadowColor = UIColor.black.cgColor
+        btnAdd.layer.shadowOpacity = 0.3
+        btnAdd.layer.shadowOffset = CGSize(width: 0, height: 4)
+        btnAdd.layer.shadowRadius = 5
+        btnAdd.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(btnAdd)
+       
+        NSLayoutConstraint.activate([
+            vistaHeader.topAnchor.constraint(equalTo: view.topAnchor),
+            vistaHeader.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            vistaHeader.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            vistaHeader.heightAnchor.constraint(equalToConstant: 110),
+            btnBack.leadingAnchor.constraint(equalTo: vistaHeader.leadingAnchor, constant: 20),
+            btnBack.bottomAnchor.constraint(equalTo: vistaHeader.bottomAnchor, constant: -15),
+            lblTitulo.centerYAnchor.constraint(equalTo: btnBack.centerYAnchor),
+            lblTitulo.leadingAnchor.constraint(equalTo: btnBack.trailingAnchor, constant: 15),
+            imgVacia.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            imgVacia.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -20),
+            imgVacia.widthAnchor.constraint(equalToConstant: 100),
+            imgVacia.heightAnchor.constraint(equalToConstant: 100),
+            lblMensaje.topAnchor.constraint(equalTo: imgVacia.bottomAnchor, constant: 20),
+            lblMensaje.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            lblSubMensaje.topAnchor.constraint(equalTo: lblMensaje.bottomAnchor, constant: 8),
+            lblSubMensaje.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            btnAdd.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -30),
+            btnAdd.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
+            btnAdd.widthAnchor.constraint(equalToConstant: 56),
+            btnAdd.heightAnchor.constraint(equalToConstant: 56)
         ])
     }
 
