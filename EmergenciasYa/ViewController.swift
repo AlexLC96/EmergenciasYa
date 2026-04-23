@@ -118,6 +118,11 @@ class ViewController: UIViewController {
     @objc func accionHaciaConfig() { irAConfig() }
     @objc func accionHaciaAlarma() { irAAlarma() }
    
+    @objc func accionHaciaEmergNums() {
+        print("Cambiando a pantalla de Números de Emergencia...")
+        irAEmergNums()
+    }
+   
     // --- PANTALLAS ---
    
     func irARegistro() {
@@ -179,7 +184,6 @@ class ViewController: UIViewController {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.96, alpha: 1.0)
        
-        // 2. BOTÓN SOS (Se cambia a .custom para asegurar toque)
         let btnSOS = UIButton(type: .custom)
         btnSOS.setTitle("SOS", for: .normal)
         btnSOS.titleLabel?.font = .systemFont(ofSize: 45, weight: .bold)
@@ -194,8 +198,6 @@ class ViewController: UIViewController {
        
         btnSOS.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnSOS)
-       
-        // LA MAGIA: Cableado del SOS
         btnSOS.isUserInteractionEnabled = true
         btnSOS.addTarget(self, action: #selector(accionHaciaAlarma), for: .touchUpInside)
        
@@ -223,6 +225,11 @@ class ViewController: UIViewController {
        
         for (icono, titulo, color) in datos {
             let vistaBoton = crearBotonOpcion(icono: icono, titulo: titulo, colorIcono: color)
+            // LA MAGIA: Si el título es el de números, le ponemos su acción
+            if titulo == "Números De Emergencia" {
+                let tap = UITapGestureRecognizer(target: self, action: #selector(accionHaciaEmergNums))
+                vistaBoton.addGestureRecognizer(tap)
+            }
             stackOpciones.addArrangedSubview(vistaBoton)
         }
        
@@ -240,19 +247,116 @@ class ViewController: UIViewController {
         ])
     }
 
+    func irAEmergNums() {
+        // 1. Limpieza y fondo
+        view.subviews.forEach({ $0.removeFromSuperview() })
+        view.backgroundColor = UIColor(white: 0.98, alpha: 1.0)
+       
+        // 2. TÍTULO SUPERIOR
+        let lblTitulo = UILabel()
+        lblTitulo.text = "Números de Emergencia"
+        lblTitulo.font = .systemFont(ofSize: 24, weight: .bold)
+        lblTitulo.textAlignment = .center
+        lblTitulo.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(lblTitulo)
+       
+        // Botón Volver
+        let btnBack = UIButton(type: .system)
+        btnBack.setImage(UIImage(systemName: "chevron.left"), for: .normal)
+        btnBack.tintColor = .black
+        btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
+        btnBack.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(btnBack)
+       
+        // 3. STACK VIEW PRINCIPAL (GRID)
+        let stackPrincipal = UIStackView()
+        stackPrincipal.axis = .vertical
+        stackPrincipal.spacing = 15
+        stackPrincipal.distribution = .fillEqually
+        stackPrincipal.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(stackPrincipal)
+       
+        // 4. DATOS (Imagen, Título Corto, Color Pastel)
+        let filas = [
+            [("LogoPolicia", "PNC", UIColor(red: 0.82, green: 0.91, blue: 1.0, alpha: 1.0)),
+             ("LogoBomberos", "Bomberos", UIColor(red: 1.0, green: 0.85, blue: 0.85, alpha: 1.0))],
+           
+            [("LogoCruzRoja", "Cruz Roja", UIColor(red: 1.0, green: 0.88, blue: 0.82, alpha: 1.0)),
+             ("LogoCruzVerde", "Cruz Verde", UIColor(red: 0.85, green: 0.95, blue: 0.85, alpha: 1.0))],
+           
+            [("LogoSalvamento", "Comandos de Salvamento", UIColor(red: 1.0, green: 1.0, blue: 0.85, alpha: 1.0)),
+             ("LogoProtCivil", "Protección Civil", UIColor(red: 1.0, green: 0.92, blue: 0.8, alpha: 1.0))],
+           
+            [("LogoAE", "AES", UIColor(red: 0.92, green: 0.88, blue: 1.0, alpha: 1.0)),
+             ("Logo123", "Sistema de Emergencias Médicas", UIColor(red: 0.85, green: 0.95, blue: 1.0, alpha: 1.0))]
+        ]
+       
+        for datosFila in filas {
+            let stackH = UIStackView()
+            stackH.axis = .horizontal
+            stackH.spacing = 15
+            stackH.distribution = .fillEqually
+            for (img, txt, color) in datosFila {
+                let boton = crearCajonEmergencia(imagen: img, titulo: txt, fondo: color)
+                stackH.addArrangedSubview(boton)
+            }
+            stackPrincipal.addArrangedSubview(stackH)
+        }
+       
+        NSLayoutConstraint.activate([
+            btnBack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
+            btnBack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            lblTitulo.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 50),
+            lblTitulo.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            stackPrincipal.topAnchor.constraint(equalTo: lblTitulo.bottomAnchor, constant: 30),
+            stackPrincipal.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            stackPrincipal.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            stackPrincipal.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40)
+        ])
+    }
+
+    func crearCajonEmergencia(imagen: String, titulo: String, fondo: UIColor) -> UIView {
+        let contenedor = UIView()
+        contenedor.backgroundColor = fondo
+        contenedor.layer.cornerRadius = 20
+        contenedor.layer.borderWidth = 1
+        contenedor.layer.borderColor = UIColor.black.withAlphaComponent(0.05).cgColor
+       
+        let imgView = UIImageView(image: UIImage(named: imagen))
+        imgView.contentMode = .scaleAspectFit
+        imgView.translatesAutoresizingMaskIntoConstraints = false
+       
+        let lbl = UILabel()
+        lbl.text = titulo
+        lbl.font = .systemFont(ofSize: 13, weight: .bold)
+        lbl.textAlignment = .center
+        lbl.numberOfLines = 2
+        lbl.translatesAutoresizingMaskIntoConstraints = false
+       
+        contenedor.addSubview(imgView)
+        contenedor.addSubview(lbl)
+       
+        NSLayoutConstraint.activate([
+            imgView.centerXAnchor.constraint(equalTo: contenedor.centerXAnchor),
+            imgView.topAnchor.constraint(equalTo: contenedor.topAnchor, constant: 20),
+            imgView.widthAnchor.constraint(equalTo: contenedor.widthAnchor, multiplier: 0.5),
+            imgView.heightAnchor.constraint(equalTo: imgView.widthAnchor),
+            lbl.topAnchor.constraint(equalTo: imgView.bottomAnchor, constant: 10),
+            lbl.leadingAnchor.constraint(equalTo: contenedor.leadingAnchor, constant: 10),
+            lbl.trailingAnchor.constraint(equalTo: contenedor.trailingAnchor, constant: -10),
+            lbl.bottomAnchor.constraint(lessThanOrEqualTo: contenedor.bottomAnchor, constant: -10)
+        ])
+        return contenedor
+    }
+
     func irAAlarma() {
-        // 1. Limpieza y fondo (Mockup Alarma de Bolsillo)
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = .white
-       
-        // 2. TÍTULO
         let lblTitulo = UILabel()
         lblTitulo.text = "Alarma de Bolsillo"
         lblTitulo.font = .systemFont(ofSize: 28, weight: .bold)
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(lblTitulo)
-       
-        // 3. BOTÓN ROJO CENTRAL (¡ALARMA!)
         let btnAlarmaCentral = UIButton(type: .custom)
         btnAlarmaCentral.setTitle("¡ALARMA!", for: .normal)
         btnAlarmaCentral.backgroundColor = .systemRed
@@ -260,8 +364,6 @@ class ViewController: UIViewController {
         btnAlarmaCentral.layer.cornerRadius = 100
         btnAlarmaCentral.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnAlarmaCentral)
-       
-        // Botón azul Activar Flash
         let btnFlash = UIButton(type: .system)
         btnFlash.setTitle("Activar Flash", for: .normal)
         btnFlash.backgroundColor = UIColor.systemBlue
@@ -269,8 +371,6 @@ class ViewController: UIViewController {
         btnFlash.layer.cornerRadius = 15
         btnFlash.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnFlash)
-       
-        // 4. TEXTO INFORMATIVO INFERIOR
         let lblInfo = UILabel()
         lblInfo.text = "Presiona el botón para activar una alarma sonora.\nUsa el botón secundario para activar el flash\ncomo señal visual."
         lblInfo.numberOfLines = 0
@@ -279,15 +379,12 @@ class ViewController: UIViewController {
         lblInfo.textColor = .gray
         lblInfo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(lblInfo)
-       
-        // Botón para volver (opcional, para que no te quedes trabado)
         let btnBack = UIButton(type: .system)
         btnBack.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         btnBack.tintColor = .black
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnBack)
-       
         NSLayoutConstraint.activate([
             btnBack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
             btnBack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
@@ -313,37 +410,31 @@ class ViewController: UIViewController {
         vistaHeader.backgroundColor = .systemRed
         vistaHeader.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(vistaHeader)
-       
         let lblConfig = UILabel()
         lblConfig.text = "Configuración"
         lblConfig.textColor = .white
         lblConfig.font = .systemFont(ofSize: 26, weight: .bold)
         lblConfig.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(lblConfig)
-       
         let btnBack = UIButton(type: .system)
         btnBack.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         btnBack.tintColor = .white
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(btnBack)
-       
         let stackPrincipal = UIStackView()
         stackPrincipal.axis = .vertical
         stackPrincipal.spacing = 25
         stackPrincipal.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stackPrincipal)
-       
         stackPrincipal.addArrangedSubview(crearEtiquetaSeccion(texto: "General"))
         stackPrincipal.addArrangedSubview(crearFilaConfig(icono: "globe", titulo: "Idioma", subtitulo: "Español"))
-       
         let btnLogout = UIButton(type: .system)
         btnLogout.setTitle("Cerrar sesión", for: .normal)
         btnLogout.setTitleColor(.systemRed, for: .normal)
         btnLogout.contentHorizontalAlignment = .left
         btnLogout.addTarget(self, action: #selector(accionHaciaLogin), for: .touchUpInside)
         stackPrincipal.addArrangedSubview(btnLogout)
-       
         NSLayoutConstraint.activate([
             vistaHeader.topAnchor.constraint(equalTo: view.topAnchor),
             vistaHeader.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -417,6 +508,7 @@ class ViewController: UIViewController {
         lbl.translatesAutoresizingMaskIntoConstraints = false
         contenedor.addSubview(imgView)
         contenedor.addSubview(lbl)
+        contenedor.isUserInteractionEnabled = true
         NSLayoutConstraint.activate([
             imgView.leadingAnchor.constraint(equalTo: contenedor.leadingAnchor, constant: 15),
             imgView.centerYAnchor.constraint(equalTo: contenedor.centerYAnchor),
