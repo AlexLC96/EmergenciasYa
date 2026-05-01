@@ -1,20 +1,30 @@
 import UIKit
 
 class ViewController: UIViewController {
-   
+    
+    // --- ESTRUCTURA DE USUARIO PARA PERSISTENCIA (P3) ---
+    struct Usuario: Codable {
+        let nombre: String
+        let correo: String
+        let contrasena: String
+    }
+    
+    // Variable para identificar al usuario que inició sesión
+    var usuarioLogueado: Usuario?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-       
+        
         // 1. Fondo blanco como tu mockup
         view.backgroundColor = .white
-       
+        
         // 2. CONFIGURAR LOGO (El icono rojo "E!")
         let imagenLogo = UIImageView()
         imagenLogo.image = UIImage(named: "LogoApp")
         imagenLogo.contentMode = .scaleAspectFit
         imagenLogo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(imagenLogo)
-       
+        
         // 3. CONFIGURAR TEXTO "EmergenciasYa!"
         let labelTitulo = UILabel()
         labelTitulo.text = "EmergenciasYa!"
@@ -22,7 +32,7 @@ class ViewController: UIViewController {
         labelTitulo.font = UIFont.systemFont(ofSize: 28, weight: .bold)
         labelTitulo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(labelTitulo)
-       
+        
         // 4. POSICIONAR EN PANTALLA (Constraints)
         NSLayoutConstraint.activate([
             imagenLogo.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -32,43 +42,40 @@ class ViewController: UIViewController {
             labelTitulo.topAnchor.constraint(equalTo: imagenLogo.bottomAnchor, constant: 20),
             labelTitulo.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ])
-       
+        
         // 5. ESPERAR 3 SEGUNDOS Y SALTAR AL LOGIN
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             print("Queso, saltando al Login...")
             self.irALogin()
         }
     }
-   
+    
     func irALogin() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = .white
-       
+        
         let imagenLogo = UIImageView(image: UIImage(named: "LogoApp"))
         imagenLogo.contentMode = .scaleAspectFit
         imagenLogo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(imagenLogo)
-       
+        
         let labelTitulo = UILabel()
         labelTitulo.text = "Inicio de Sesión"
         labelTitulo.font = .systemFont(ofSize: 30, weight: .bold)
         labelTitulo.textColor = UIColor(white: 0.1, alpha: 1.0)
         labelTitulo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(labelTitulo)
-       
+        
         let txtCorreo = UITextField()
         txtCorreo.placeholder = "Correo electrónico"
         txtCorreo.borderStyle = .roundedRect
         txtCorreo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(txtCorreo)
-       
-        let txtPassword = UITextField()
-        txtPassword.placeholder = "Contraseña"
-        txtPassword.isSecureTextEntry = true
-        txtPassword.borderStyle = .roundedRect
-        txtPassword.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Actualizado: Ahora usa la función auxiliar para el botón de "ojo"
+        let txtPassword = crearCampoTexto(p: "Contraseña", esSeguro: true)
         view.addSubview(txtPassword)
-       
+        
         let btnEntrar = UIButton(type: .system)
         btnEntrar.setTitle("Iniciar sesión", for: .normal)
         btnEntrar.backgroundColor = UIColor.systemRed
@@ -76,8 +83,28 @@ class ViewController: UIViewController {
         btnEntrar.layer.cornerRadius = 12
         btnEntrar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnEntrar)
-        btnEntrar.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
-       
+        
+        // --- LÓGICA DE VALIDACIÓN DE LOGIN (SOPORTE MULTIUSUARIO) ---
+        btnEntrar.addAction(UIAction(handler: { _ in
+            let email = txtCorreo.text ?? ""
+            let pass = txtPassword.text ?? ""
+            
+            if email.isEmpty || pass.isEmpty {
+                self.mostrarAlerta(titulo: "Campos Vacíos", msj: "Por favor, completa los datos.")
+                return
+            }
+            
+            // Cargamos la lista completa de usuarios
+            let lista = self.cargarListaUsuarios()
+            
+            if let userEncontrado = lista.first(where: { $0.correo == email && $0.contrasena == pass }) {
+                self.usuarioLogueado = userEncontrado
+                self.irAHome()
+            } else {
+                self.mostrarAlerta(titulo: "Error", msj: "Correo o contraseña incorrectos.")
+            }
+        }), for: .touchUpInside)
+        
         let btnHaciaRegistro = UIButton(type: .system)
         btnHaciaRegistro.setTitle("¿No tienes cuenta? Regístrate", for: .normal)
         btnHaciaRegistro.setTitleColor(.systemRed, for: .normal)
@@ -85,7 +112,7 @@ class ViewController: UIViewController {
         btnHaciaRegistro.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnHaciaRegistro)
         btnHaciaRegistro.addTarget(self, action: #selector(accionHaciaRegistro), for: .touchUpInside)
-       
+        
         NSLayoutConstraint.activate([
             imagenLogo.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
             imagenLogo.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -109,15 +136,15 @@ class ViewController: UIViewController {
             btnHaciaRegistro.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ])
     }
-   
+    
     // --- FUNCIONES DE ACCIÓN (PUENTES) ---
-   
+    
     @objc func accionHaciaRegistro() { irARegistro() }
     @objc func accionHaciaLogin() { irALogin() }
     @objc func accionHaciaHome() { irAHome() }
     @objc func accionHaciaConfig() { irAConfig() }
     @objc func accionHaciaAlarma() { irAAlarma() }
-   
+    
     @objc func accionHaciaEmergNums() {
         print("Cambiando a pantalla de Números de Emergencia...")
         irAEmergNums()
@@ -142,9 +169,9 @@ class ViewController: UIViewController {
         print("Navegando a Registro de Incidentes...")
         irAIncidentes()
     }
-   
+    
     // --- PANTALLAS ---
-   
+    
     func irARegistro() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = .white
@@ -153,23 +180,19 @@ class ViewController: UIViewController {
         lblTitulo.font = .systemFont(ofSize: 28, weight: .bold)
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(lblTitulo)
-       
-        let stackFields = UIStackView()
+        
+        let txtNombre = crearCampoTexto(p: "Nombre")
+        let txtCorreo = crearCampoTexto(p: "Correo")
+        let txtPass = crearCampoTexto(p: "Contraseña", esSeguro: true)
+        let txtConfirm = crearCampoTexto(p: "Confirmar contraseña", esSeguro: true)
+        
+        let stackFields = UIStackView(arrangedSubviews: [txtNombre, txtCorreo, txtPass, txtConfirm])
         stackFields.axis = .vertical
         stackFields.spacing = 15
         stackFields.distribution = .fillEqually
         stackFields.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stackFields)
-       
-        let placeholders = ["Nombre", "Correo", "Contraseña", "Confirmar contraseña"]
-        for p in placeholders {
-            let txt = UITextField()
-            txt.placeholder = p
-            txt.borderStyle = .roundedRect
-            if p.contains("Contraseña") { txt.isSecureTextEntry = true }
-            stackFields.addArrangedSubview(txt)
-        }
-       
+        
         let btnRegistrar = UIButton(type: .system)
         btnRegistrar.setTitle("Registrar", for: .normal)
         btnRegistrar.backgroundColor = .systemRed
@@ -177,14 +200,41 @@ class ViewController: UIViewController {
         btnRegistrar.layer.cornerRadius = 20
         btnRegistrar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnRegistrar)
-       
+        
+        // --- LÓGICA DE REGISTRO CON ARREGLO (P3) ---
+        btnRegistrar.addAction(UIAction(handler: { _ in
+            guard let nom = txtNombre.text, !nom.isEmpty,
+                  let email = txtCorreo.text, self.esCorreoValido(email),
+                  let pass = txtPass.text, pass.count >= 6,
+                  let conf = txtConfirm.text else {
+                self.mostrarAlerta(titulo: "Atención", msj: "Datos incompletos o correo inválido. La clave debe tener 6+ caracteres.")
+                return
+            }
+            
+            if pass != conf {
+                self.mostrarAlerta(titulo: "Error", msj: "Las contraseñas no coinciden.")
+                return
+            }
+            
+            // Obtener lista actual, agregar nuevo y guardar
+            var usuarios = self.cargarListaUsuarios()
+            let nuevoUser = Usuario(nombre: nom, correo: email, contrasena: pass)
+            usuarios.append(nuevoUser)
+            
+            if let data = try? JSONEncoder().encode(usuarios) {
+                UserDefaults.standard.set(data, forKey: "ListaUsuariosSIGMU")
+                self.mostrarAlerta(titulo: "Éxito", msj: "Cuenta creada correctamente.")
+                self.irALogin()
+            }
+        }), for: .touchUpInside)
+        
         let btnVolver = UIButton(type: .system)
         btnVolver.setTitle("Ya tengo una cuenta", for: .normal)
         btnVolver.setTitleColor(.black, for: .normal)
         btnVolver.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnVolver)
         btnVolver.addTarget(self, action: #selector(accionHaciaLogin), for: .touchUpInside)
-       
+        
         NSLayoutConstraint.activate([
             lblTitulo.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
             lblTitulo.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -199,11 +249,25 @@ class ViewController: UIViewController {
             btnVolver.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ])
     }
-   
+    
     func irAHome() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.96, alpha: 1.0)
-       
+        
+        // --- BARRA ROJA DE BIENVENIDA (P3) ---
+        let barraBienvenida = UIView()
+        barraBienvenida.backgroundColor = .systemRed
+        barraBienvenida.layer.cornerRadius = 10
+        barraBienvenida.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(barraBienvenida)
+        
+        let lblBienvenida = UILabel()
+        lblBienvenida.text = "Bienvenido, \(usuarioLogueado?.nombre ?? "Usuario")"
+        lblBienvenida.textColor = .white
+        lblBienvenida.font = .systemFont(ofSize: 16, weight: .bold)
+        lblBienvenida.translatesAutoresizingMaskIntoConstraints = false
+        barraBienvenida.addSubview(lblBienvenida)
+        
         let btnSOS = UIButton(type: .custom)
         btnSOS.setTitle("SOS", for: .normal)
         btnSOS.titleLabel?.font = .systemFont(ofSize: 45, weight: .bold)
@@ -215,26 +279,26 @@ class ViewController: UIViewController {
         btnSOS.layer.shadowOffset = CGSize(width: 0, height: 5)
         btnSOS.layer.shadowRadius = 10
         btnSOS.layer.shadowOpacity = 0.3
-       
+        
         btnSOS.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnSOS)
         btnSOS.isUserInteractionEnabled = true
         btnSOS.addTarget(self, action: #selector(accionHaciaAlarma), for: .touchUpInside)
-       
+        
         let btnSettings = UIButton(type: .system)
         btnSettings.setImage(UIImage(systemName: "gearshape.fill"), for: .normal)
         btnSettings.tintColor = .gray
         btnSettings.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnSettings)
         btnSettings.addTarget(self, action: #selector(accionHaciaConfig), for: .touchUpInside)
-       
+        
         let stackOpciones = UIStackView()
         stackOpciones.axis = .vertical
         stackOpciones.spacing = 12
         stackOpciones.distribution = .fillEqually
         stackOpciones.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stackOpciones)
-       
+        
         let datos = [
             ("phone.fill", "Números De Emergencia", UIColor.systemBlue),
             ("plus.app.fill", "Primeros Auxilios", UIColor.systemPink),
@@ -242,11 +306,11 @@ class ViewController: UIViewController {
             ("mappin.and.ellipse", "Compartir Ubicación", UIColor.systemGreen),
             ("clock.arrow.circlepath", "Registro de incidentes", UIColor.systemGray)
         ]
-       
+        
         for (icono, titulo, color) in datos {
             let vistaBoton = crearBotonOpcion(icono: icono, titulo: titulo, colorIcono: color)
             vistaBoton.isUserInteractionEnabled = true
-           
+            
             if titulo == "Números De Emergencia" {
                 let tap = UITapGestureRecognizer(target: self, action: #selector(accionHaciaEmergNums))
                 vistaBoton.addGestureRecognizer(tap)
@@ -265,14 +329,24 @@ class ViewController: UIViewController {
             }
             stackOpciones.addArrangedSubview(vistaBoton)
         }
-       
+        
         NSLayoutConstraint.activate([
-            btnSettings.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
+            barraBienvenida.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
+            barraBienvenida.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            barraBienvenida.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            barraBienvenida.heightAnchor.constraint(equalToConstant: 40),
+            
+            lblBienvenida.centerXAnchor.constraint(equalTo: barraBienvenida.centerXAnchor),
+            lblBienvenida.centerYAnchor.constraint(equalTo: barraBienvenida.centerYAnchor),
+
+            btnSettings.topAnchor.constraint(equalTo: barraBienvenida.bottomAnchor, constant: 5),
             btnSettings.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            btnSOS.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 60),
+            
+            btnSOS.topAnchor.constraint(equalTo: barraBienvenida.bottomAnchor, constant: 55),
             btnSOS.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             btnSOS.widthAnchor.constraint(equalToConstant: tamanoSOS),
             btnSOS.heightAnchor.constraint(equalToConstant: tamanoSOS),
+            
             stackOpciones.topAnchor.constraint(equalTo: btnSOS.bottomAnchor, constant: 40),
             stackOpciones.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 25),
             stackOpciones.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -25),
@@ -337,49 +411,49 @@ class ViewController: UIViewController {
     func irAFirstAid() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.97, alpha: 1.0)
-       
+        
         let vistaHeader = UIView()
         vistaHeader.backgroundColor = .systemRed
         vistaHeader.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(vistaHeader)
-       
+        
         let btnBack = UIButton(type: .system)
         btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
         btnBack.tintColor = .white
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(btnBack)
-       
+        
         let lblTitulo = UILabel()
         lblTitulo.text = "Guía de Primeros Auxilios"
         lblTitulo.textColor = .white
         lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(lblTitulo)
-       
+        
         let txtBuscar = UITextField()
         txtBuscar.placeholder = "Buscar una situación..."
         txtBuscar.backgroundColor = .white
         txtBuscar.borderStyle = .roundedRect
         txtBuscar.layer.cornerRadius = 10
         txtBuscar.translatesAutoresizingMaskIntoConstraints = false
-       
+        
         let leftIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
         leftIcon.tintColor = .gray
-        txtBuscar.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 30, height: 20)) // Corregido
+        txtBuscar.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 30, height: 20))
         txtBuscar.leftViewMode = .always
         view.addSubview(txtBuscar)
-       
+        
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
-       
+        
         let stackContenido = UIStackView()
         stackContenido.axis = .vertical
         stackContenido.spacing = 15
         stackContenido.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(stackContenido)
-       
+        
         let guias = [
             ("flame.fill", "Quemaduras", "Acciones básicas en caso de quemaduras."),
             ("heart.fill", "RCP Básica", "Reanimación cardiopulmonar para adultos."),
@@ -387,12 +461,12 @@ class ViewController: UIViewController {
             ("fork.knife", "Atragantamiento (Heimlich)", "Cómo actuar ante una obstrucción de la vía aérea."),
             ("drop.fill", "Hemorragias", "Cómo detener una hemorragia externa.")
         ]
-       
+        
         for (icono, titulo, sub) in guias {
             let celda = crearCeldaGuia(icono: icono, titulo: titulo, subtitulo: sub)
             stackContenido.addArrangedSubview(celda)
         }
-       
+        
         NSLayoutConstraint.activate([
             vistaHeader.topAnchor.constraint(equalTo: view.topAnchor),
             vistaHeader.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -421,46 +495,46 @@ class ViewController: UIViewController {
     func irAContactos() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.98, alpha: 1.0)
-       
+        
         let vistaHeader = UIView()
         vistaHeader.backgroundColor = .systemRed
         vistaHeader.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(vistaHeader)
-       
+        
         let btnBack = UIButton(type: .system)
         btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
         btnBack.tintColor = .white
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(btnBack)
-       
+        
         let lblTitulo = UILabel()
         lblTitulo.text = "Contactos de Confianza"
         lblTitulo.textColor = .white
         lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(lblTitulo)
-       
+        
         let imgVacia = UIImageView(image: UIImage(systemName: "person.crop.circle.badge.plus"))
         imgVacia.tintColor = .systemGray3
         imgVacia.contentMode = .scaleAspectFit
         imgVacia.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(imgVacia)
-       
+        
         let lblMensaje = UILabel()
         lblMensaje.text = "No hay contactos de confianza"
         lblMensaje.font = .systemFont(ofSize: 18, weight: .medium)
         lblMensaje.textColor = .darkGray
         lblMensaje.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(lblMensaje)
-       
+        
         let lblSubMensaje = UILabel()
         lblSubMensaje.text = "Usa el botón '+' para añadir uno."
         lblSubMensaje.font = .systemFont(ofSize: 14)
         lblSubMensaje.textColor = .gray
         lblSubMensaje.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(lblSubMensaje)
-       
+        
         let btnAdd = UIButton(type: .custom)
         btnAdd.backgroundColor = .systemRed
         btnAdd.setImage(UIImage(systemName: "plus"), for: .normal)
@@ -472,7 +546,7 @@ class ViewController: UIViewController {
         btnAdd.layer.shadowRadius = 5
         btnAdd.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnAdd)
-       
+        
         NSLayoutConstraint.activate([
             vistaHeader.topAnchor.constraint(equalTo: view.topAnchor),
             vistaHeader.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -500,7 +574,7 @@ class ViewController: UIViewController {
     func irAUbicacion() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = .white
-       
+        
         let vistaPanel = UIView()
         vistaPanel.backgroundColor = .white
         vistaPanel.layer.cornerRadius = 25
@@ -511,34 +585,34 @@ class ViewController: UIViewController {
         vistaPanel.layer.shadowRadius = 10
         vistaPanel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(vistaPanel)
-       
+        
         let vistaHeader = UIView()
         vistaHeader.backgroundColor = .systemRed
         vistaHeader.layer.cornerRadius = 25
         vistaHeader.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
         vistaHeader.translatesAutoresizingMaskIntoConstraints = false
         vistaPanel.addSubview(vistaHeader)
-       
+        
         let btnBack = UIButton(type: .system)
         btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
         btnBack.tintColor = .white
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(btnBack)
-       
+        
         let lblTitulo = UILabel()
         lblTitulo.text = "Compartir Ubicación"
         lblTitulo.textColor = .white
         lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(lblTitulo)
-       
+        
         let imgUbicacion = UIImageView(image: UIImage(systemName: "mappin.and.ellipse"))
         imgUbicacion.tintColor = .systemRed
         imgUbicacion.contentMode = .scaleAspectFit
         imgUbicacion.translatesAutoresizingMaskIntoConstraints = false
         vistaPanel.addSubview(imgUbicacion)
-       
+        
         let lblMensaje = UILabel()
         lblMensaje.text = "Para enviar tu ubicación, presiona el botón de abajo."
         lblMensaje.numberOfLines = 0
@@ -547,7 +621,7 @@ class ViewController: UIViewController {
         lblMensaje.textColor = .gray
         lblMensaje.translatesAutoresizingMaskIntoConstraints = false
         vistaPanel.addSubview(lblMensaje)
-       
+        
         let btnEnviar = UIButton(type: .system)
         btnEnviar.setTitle("Enviar Ubicación Actual", for: .normal)
         btnEnviar.backgroundColor = .systemRed
@@ -556,7 +630,7 @@ class ViewController: UIViewController {
         btnEnviar.layer.cornerRadius = 25
         btnEnviar.translatesAutoresizingMaskIntoConstraints = false
         vistaPanel.addSubview(btnEnviar)
-       
+        
         NSLayoutConstraint.activate([
             vistaPanel.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             vistaPanel.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -587,39 +661,39 @@ class ViewController: UIViewController {
     func irAIncidentes() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.98, alpha: 1.0)
-       
+        
         let vistaHeader = UIView()
         vistaHeader.backgroundColor = .systemRed
         vistaHeader.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(vistaHeader)
-       
+        
         let btnBack = UIButton(type: .system)
         btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
         btnBack.tintColor = .white
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(btnBack)
-       
+        
         let lblTitulo = UILabel()
         lblTitulo.text = "Registro de incidentes"
         lblTitulo.textColor = .white
         lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(lblTitulo)
-       
+        
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
-       
+        
         let stackCampos = UIStackView()
         stackCampos.axis = .vertical
         stackCampos.spacing = 15
         stackCampos.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(stackCampos)
-       
+        
         let txtTitulo = crearCampoTexto(p: "Título del incidente")
         let txtUbi = crearCampoTexto(p: "Ubicación (opcional)")
-       
+        
         let txtDesc = UITextView()
         txtDesc.text = "Descripción del incidente"
         txtDesc.textColor = .lightGray
@@ -629,7 +703,7 @@ class ViewController: UIViewController {
         txtDesc.layer.cornerRadius = 8
         txtDesc.translatesAutoresizingMaskIntoConstraints = false
         txtDesc.heightAnchor.constraint(equalToConstant: 100).isActive = true
-       
+        
         let btnGuardar = UIButton(type: .system)
         btnGuardar.setTitle("Guardar incidente", for: .normal)
         btnGuardar.backgroundColor = .systemRed
@@ -638,21 +712,21 @@ class ViewController: UIViewController {
         btnGuardar.layer.cornerRadius = 25
         btnGuardar.translatesAutoresizingMaskIntoConstraints = false
         btnGuardar.heightAnchor.constraint(equalToConstant: 50).isActive = true
-       
+        
         stackCampos.addArrangedSubview(txtTitulo)
         stackCampos.addArrangedSubview(txtUbi)
         stackCampos.addArrangedSubview(txtDesc)
         stackCampos.addArrangedSubview(btnGuardar)
-       
+        
         let lblHistorial = UILabel()
         lblHistorial.text = "Incidentes recientes"
         lblHistorial.font = .systemFont(ofSize: 18, weight: .bold)
         lblHistorial.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(lblHistorial)
-       
+        
         let cardIncidente = crearTarjetaIncidente(titulo: "Incidente", desc: "Descripción", fecha: "18/02/2026 10:15", ubi: "Santa Ana")
         scrollView.addSubview(cardIncidente)
-       
+        
         NSLayoutConstraint.activate([
             vistaHeader.topAnchor.constraint(equalTo: view.topAnchor),
             vistaHeader.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -676,83 +750,6 @@ class ViewController: UIViewController {
             cardIncidente.trailingAnchor.constraint(equalTo: stackCampos.trailingAnchor),
             cardIncidente.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -20)
         ])
-    }
-
-    func crearCeldaGuia(icono: String, titulo: String, subtitulo: String) -> UIView {
-        let vista = UIView()
-        vista.backgroundColor = .white
-        vista.layer.cornerRadius = 15
-        vista.layer.shadowColor = UIColor.black.cgColor
-        vista.layer.shadowOpacity = 0.1
-        vista.layer.shadowOffset = CGSize(width: 0, height: 2)
-        let imgIcono = UIImageView(image: UIImage(systemName: icono))
-        imgIcono.tintColor = .systemRed
-        imgIcono.contentMode = .scaleAspectFit
-        imgIcono.translatesAutoresizingMaskIntoConstraints = false
-        let lblTitulo = UILabel()
-        lblTitulo.text = titulo
-        lblTitulo.font = .systemFont(ofSize: 17, weight: .bold)
-        lblTitulo.translatesAutoresizingMaskIntoConstraints = false
-        let lblSub = UILabel()
-        lblSub.text = subtitulo
-        lblSub.font = .systemFont(ofSize: 13)
-        lblSub.textColor = .gray
-        lblSub.numberOfLines = 2
-        lblSub.translatesAutoresizingMaskIntoConstraints = false
-        let flecha = UIImageView(image: UIImage(systemName: "arrow.left"))
-        flecha.tintColor = .systemGray4
-        flecha.translatesAutoresizingMaskIntoConstraints = false
-        vista.addSubview(imgIcono)
-        vista.addSubview(lblTitulo)
-        vista.addSubview(lblSub)
-        vista.addSubview(flecha)
-        NSLayoutConstraint.activate([
-            imgIcono.leadingAnchor.constraint(equalTo: vista.leadingAnchor, constant: 15),
-            imgIcono.centerYAnchor.constraint(equalTo: vista.centerYAnchor),
-            imgIcono.widthAnchor.constraint(equalToConstant: 35),
-            imgIcono.heightAnchor.constraint(equalToConstant: 35),
-            lblTitulo.topAnchor.constraint(equalTo: vista.topAnchor, constant: 15),
-            lblTitulo.leadingAnchor.constraint(equalTo: imgIcono.trailingAnchor, constant: 15),
-            lblTitulo.trailingAnchor.constraint(equalTo: flecha.leadingAnchor, constant: -10),
-            lblSub.topAnchor.constraint(equalTo: lblTitulo.bottomAnchor, constant: 4),
-            lblSub.leadingAnchor.constraint(equalTo: lblTitulo.leadingAnchor),
-            lblSub.trailingAnchor.constraint(equalTo: lblTitulo.trailingAnchor),
-            lblSub.bottomAnchor.constraint(equalTo: vista.bottomAnchor, constant: -15),
-            flecha.trailingAnchor.constraint(equalTo: vista.trailingAnchor, constant: -15),
-            flecha.centerYAnchor.constraint(equalTo: vista.centerYAnchor),
-            flecha.widthAnchor.constraint(equalToConstant: 18)
-        ])
-        return vista
-    }
-
-    func crearCajonEmergencia(imagen: String, titulo: String, fondo: UIColor) -> UIView {
-        let contenedor = UIView()
-        contenedor.backgroundColor = fondo
-        contenedor.layer.cornerRadius = 20
-        contenedor.layer.borderWidth = 1
-        contenedor.layer.borderColor = UIColor.black.withAlphaComponent(0.05).cgColor
-        let imgView = UIImageView(image: UIImage(named: imagen))
-        imgView.contentMode = .scaleAspectFit
-        imgView.translatesAutoresizingMaskIntoConstraints = false
-        let lbl = UILabel()
-        lbl.text = titulo
-        lbl.font = .systemFont(ofSize: 13, weight: .bold)
-        lbl.textAlignment = .center
-        lbl.numberOfLines = 2
-        lbl.translatesAutoresizingMaskIntoConstraints = false
-        contenedor.addSubview(imgView)
-        contenedor.addSubview(lbl)
-        NSLayoutConstraint.activate([
-            imgView.centerXAnchor.constraint(equalTo: contenedor.centerXAnchor),
-            imgView.topAnchor.constraint(equalTo: contenedor.topAnchor, constant: 20),
-            imgView.widthAnchor.constraint(equalTo: contenedor.widthAnchor, multiplier: 0.5),
-            imgView.heightAnchor.constraint(equalTo: imgView.widthAnchor),
-            lbl.topAnchor.constraint(equalTo: imgView.bottomAnchor, constant: 10),
-            lbl.leadingAnchor.constraint(equalTo: contenedor.leadingAnchor, constant: 10),
-            lbl.trailingAnchor.constraint(equalTo: contenedor.trailingAnchor, constant: -10),
-            lbl.bottomAnchor.constraint(lessThanOrEqualTo: contenedor.bottomAnchor, constant: -10)
-        ])
-        return contenedor
     }
 
     func irAAlarma() {
@@ -855,16 +852,99 @@ class ViewController: UIViewController {
             stackPrincipal.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -25)
         ])
     }
-   
-    // --- FUNCIONES AUXILIARES ---
-    func crearCampoTexto(p: String) -> UITextField {
+
+    // --- FUNCIONES AUXILIARES Y COMPONENTES (P3) ---
+
+    func cargarListaUsuarios() -> [Usuario] {
+        if let data = UserDefaults.standard.data(forKey: "ListaUsuariosSIGMU"),
+           let decoded = try? JSONDecoder().decode([Usuario].self, from: data) {
+            return decoded
+        }
+        return []
+    }
+
+    func esCorreoValido(_ email: String) -> Bool {
+        let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        return NSPredicate(format:"SELF MATCHES %@", emailRegEx).evaluate(with: email)
+    }
+    
+    func mostrarAlerta(titulo: String, msj: String) {
+        let alert = UIAlertController(title: titulo, message: msj, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        self.present(alert, animated: true)
+    }
+
+    // Actualizado: Ahora incluye botón de "ojo" para seguridad
+    func crearCampoTexto(p: String, esSeguro: Bool = false) -> UITextField {
         let t = UITextField()
         t.placeholder = p
         t.borderStyle = .roundedRect
         t.font = .systemFont(ofSize: 16)
         t.translatesAutoresizingMaskIntoConstraints = false
         t.heightAnchor.constraint(equalToConstant: 45).isActive = true
+        
+        if esSeguro {
+            t.isSecureTextEntry = true
+            let btnOjo = UIButton(type: .custom)
+            btnOjo.setImage(UIImage(systemName: "eye.slash"), for: .normal)
+            btnOjo.setImage(UIImage(systemName: "eye"), for: .selected)
+            btnOjo.tintColor = .lightGray
+            btnOjo.frame = CGRect(x: 0, y: 0, width: 30, height: 30)
+            btnOjo.addAction(UIAction(handler: { _ in
+                btnOjo.isSelected.toggle()
+                t.isSecureTextEntry = !btnOjo.isSelected
+            }), for: .touchUpInside)
+            t.rightView = btnOjo
+            t.rightViewMode = .always
+        }
         return t
+    }
+
+    func crearCeldaGuia(icono: String, titulo: String, subtitulo: String) -> UIView {
+        let vista = UIView()
+        vista.backgroundColor = .white
+        vista.layer.cornerRadius = 15
+        vista.layer.shadowColor = UIColor.black.cgColor
+        vista.layer.shadowOpacity = 0.1
+        vista.layer.shadowOffset = CGSize(width: 0, height: 2)
+        let imgIcono = UIImageView(image: UIImage(systemName: icono))
+        imgIcono.tintColor = .systemRed
+        imgIcono.contentMode = .scaleAspectFit
+        imgIcono.translatesAutoresizingMaskIntoConstraints = false
+        let lblTitulo = UILabel()
+        lblTitulo.text = titulo
+        lblTitulo.font = .systemFont(ofSize: 17, weight: .bold)
+        lblTitulo.translatesAutoresizingMaskIntoConstraints = false
+        let lblSub = UILabel()
+        lblSub.text = subtitulo
+        lblSub.font = .systemFont(ofSize: 13)
+        lblSub.textColor = .gray
+        lblSub.numberOfLines = 2
+        lblSub.translatesAutoresizingMaskIntoConstraints = false
+        let flecha = UIImageView(image: UIImage(systemName: "arrow.left"))
+        flecha.tintColor = .systemGray4
+        flecha.translatesAutoresizingMaskIntoConstraints = false
+        vista.addSubview(imgIcono)
+        vista.addSubview(lblTitulo)
+        vista.addSubview(lblSub)
+        vista.addSubview(flecha)
+        NSLayoutConstraint.activate([
+            imgIcono.leadingAnchor.constraint(equalTo: vista.leadingAnchor, constant: 15),
+            imgIcono.centerYAnchor.constraint(equalTo: vista.centerYAnchor),
+            imgIcono.widthAnchor.constraint(equalToConstant: 35),
+            imgIcono.heightAnchor.constraint(equalToConstant: 35),
+            lblTitulo.topAnchor.constraint(equalTo: vista.topAnchor, constant: 15),
+            lblTitulo.leadingAnchor.constraint(equalTo: imgIcono.trailingAnchor, constant: 15),
+            lblTitulo.trailingAnchor.constraint(equalTo: flecha.leadingAnchor, constant: -10),
+            lblSub.topAnchor.constraint(equalTo: lblTitulo.bottomAnchor, constant: 4),
+            lblSub.leadingAnchor.constraint(equalTo: lblTitulo.leadingAnchor),
+            lblSub.trailingAnchor.constraint(equalTo: lblTitulo.trailingAnchor),
+            lblSub.bottomAnchor.constraint(equalTo: vista.bottomAnchor, constant: -15),
+            flecha.trailingAnchor.constraint(equalTo: vista.trailingAnchor, constant: -15),
+            flecha.centerYAnchor.constraint(equalTo: vista.centerYAnchor),
+            flecha.widthAnchor.constraint(equalToConstant: 18)
+        ])
+        return vista
     }
 
     func crearTarjetaIncidente(titulo: String, desc: String, fecha: String, ubi: String) -> UIView {
@@ -935,6 +1015,36 @@ class ViewController: UIViewController {
         return vista
     }
 
+    func crearCajonEmergencia(imagen: String, titulo: String, fondo: UIColor) -> UIView {
+        let contenedor = UIView()
+        contenedor.backgroundColor = fondo
+        contenedor.layer.cornerRadius = 20
+        contenedor.layer.borderWidth = 1
+        contenedor.layer.borderColor = UIColor.black.withAlphaComponent(0.05).cgColor
+        let imgView = UIImageView(image: UIImage(named: imagen))
+        imgView.contentMode = .scaleAspectFit
+        imgView.translatesAutoresizingMaskIntoConstraints = false
+        let lbl = UILabel()
+        lbl.text = titulo
+        lbl.font = .systemFont(ofSize: 13, weight: .bold)
+        lbl.textAlignment = .center
+        lbl.numberOfLines = 2
+        lbl.translatesAutoresizingMaskIntoConstraints = false
+        contenedor.addSubview(imgView)
+        contenedor.addSubview(lbl)
+        NSLayoutConstraint.activate([
+            imgView.centerXAnchor.constraint(equalTo: contenedor.centerXAnchor),
+            imgView.topAnchor.constraint(equalTo: contenedor.topAnchor, constant: 20),
+            imgView.widthAnchor.constraint(equalTo: contenedor.widthAnchor, multiplier: 0.5),
+            imgView.heightAnchor.constraint(equalTo: imgView.widthAnchor),
+            lbl.topAnchor.constraint(equalTo: imgView.bottomAnchor, constant: 10),
+            lbl.leadingAnchor.constraint(equalTo: contenedor.leadingAnchor, constant: 10),
+            lbl.trailingAnchor.constraint(equalTo: contenedor.trailingAnchor, constant: -10),
+            lbl.bottomAnchor.constraint(lessThanOrEqualTo: contenedor.bottomAnchor, constant: -10)
+        ])
+        return contenedor
+    }
+
     func crearEtiquetaSeccion(texto: String) -> UILabel {
         let lbl = UILabel()
         lbl.text = texto
@@ -974,7 +1084,7 @@ class ViewController: UIViewController {
         ])
         return vista
     }
-   
+    
     func crearBotonOpcion(icono: String, titulo: String, colorIcono: UIColor) -> UIView {
         let contenedor = UIView()
         contenedor.backgroundColor = .white
