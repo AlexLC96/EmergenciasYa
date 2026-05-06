@@ -2,15 +2,24 @@ import UIKit
 
 class ViewController: UIViewController {
     
-    // --- ESTRUCTURA DE USUARIO PARA PERSISTENCIA (P3) ---
+    // --- ESTRUCTURAS ---
     struct Usuario: Codable {
         let nombre: String
         let correo: String
         let contrasena: String
     }
     
+    // Nueva estructura para Contactos de Confianza
+    struct Contacto: Codable {
+        var nombre: String
+        var telefono: String
+    }
+    
     // Variable para identificar al usuario que inició sesión
     var usuarioLogueado: Usuario?
+    
+    // Lista dinámica de contactos
+    var listaContactos: [Contacto] = []
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -408,7 +417,6 @@ class ViewController: UIViewController {
         ])
     }
 
-    // --- ACTUALIZACIÓN: PRIMEROS AUXILIOS CON BUSCADOR Y MODALES ---
     func irAFirstAid() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.97, alpha: 1.0)
@@ -460,18 +468,12 @@ class ViewController: UIViewController {
         stackContenido.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(stackContenido)
         
-        // Función interna para refrescar la UI
         func renderizar(lista: [(i: String, t: String, d: String)]) {
             stackContenido.arrangedSubviews.forEach { $0.removeFromSuperview() }
             for item in lista {
                 let celda = crearCeldaGuia(icono: item.i, titulo: item.t, subtitulo: "Toca para ver detalles")
-                
-                // Acción de ventana flotante
-                let tap = UITapGestureRecognizer(target: self, action: nil)
-                celda.addGestureRecognizer(tap)
                 celda.isUserInteractionEnabled = true
                 
-                // Botón invisible para capturar el toque y lanzar el modal
                 let btnAccion = UIButton(type: .custom)
                 btnAccion.addAction(UIAction(handler: { _ in
                     let alert = UIAlertController(title: item.t, message: item.d, preferredStyle: .alert)
@@ -492,7 +494,6 @@ class ViewController: UIViewController {
             }
         }
         
-        // Filtro del buscador
         txtBuscar.addAction(UIAction(handler: { _ in
             let q = txtBuscar.text?.lowercased() ?? ""
             renderizar(lista: q.isEmpty ? todasLasGuias : todasLasGuias.filter { $0.t.lowercased().contains(q) })
@@ -525,10 +526,14 @@ class ViewController: UIViewController {
         ])
     }
 
+    // --- ACTUALIZACIÓN: CONTACTOS CON EDICIÓN, ELIMINACIÓN Y ADVERTENCIA DE 8 DÍGITOS ---
     func irAContactos() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.98, alpha: 1.0)
        
+        // Cargar contactos guardados
+        self.listaContactos = cargarContactos()
+        
         let vistaHeader = UIView()
         vistaHeader.backgroundColor = .systemRed
         vistaHeader.translatesAutoresizingMaskIntoConstraints = false
@@ -547,38 +552,92 @@ class ViewController: UIViewController {
         lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(lblTitulo)
+
+        let scrollView = UIScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(scrollView)
        
+        let stackContactos = UIStackView()
+        stackContactos.axis = .vertical
+        stackContactos.spacing = 15
+        stackContactos.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.addSubview(stackContactos)
+       
+        let vistaVacia = UIStackView()
+        vistaVacia.axis = .vertical
+        vistaVacia.alignment = .center
+        vistaVacia.spacing = 15
+        vistaVacia.translatesAutoresizingMaskIntoConstraints = false
+        
         let imgVacia = UIImageView(image: UIImage(systemName: "person.crop.circle.badge.plus"))
         imgVacia.tintColor = .systemGray3
         imgVacia.contentMode = .scaleAspectFit
-        imgVacia.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(imgVacia)
-       
+        
         let lblMensaje = UILabel()
         lblMensaje.text = "No hay contactos de confianza"
         lblMensaje.font = .systemFont(ofSize: 18, weight: .medium)
         lblMensaje.textColor = .darkGray
-        lblMensaje.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(lblMensaje)
-       
-        let lblSubMensaje = UILabel()
-        lblSubMensaje.text = "Usa el botón '+' para añadir uno."
-        lblSubMensaje.font = .systemFont(ofSize: 14)
-        lblSubMensaje.textColor = .gray
-        lblSubMensaje.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(lblSubMensaje)
+        
+        vistaVacia.addArrangedSubview(imgVacia)
+        vistaVacia.addArrangedSubview(lblMensaje)
+        view.addSubview(vistaVacia)
+        
+        func refrescarLista() {
+            stackContactos.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            if listaContactos.isEmpty {
+                vistaVacia.isHidden = false
+            } else {
+                vistaVacia.isHidden = true
+                for (index, con) in listaContactos.enumerated() {
+                    let tarjeta = crearTarjetaContacto(c: con)
+                    tarjeta.isUserInteractionEnabled = true
+                    
+                    // Acción para abrir menú de opciones
+                    let tapMenu = UIAction(handler: { _ in
+                        let menu = UIAlertController(title: con.nombre, message: "¿Qué deseas hacer?", preferredStyle: .actionSheet)
+                        
+                        menu.addAction(UIAlertAction(title: "Editar", style: .default, handler: { _ in
+                            self.mostrarVentanaFlotanteContacto(esEdicion: true, index: index, alFinalizar: refrescarLista)
+                        }))
+                        
+                        menu.addAction(UIAlertAction(title: "Eliminar", style: .destructive, handler: { _ in
+                            self.listaContactos.remove(at: index)
+                            self.guardarContactos(self.listaContactos)
+                            refrescarLista()
+                        }))
+                        
+                        menu.addAction(UIAlertAction(title: "Cancelar", style: .cancel))
+                        self.present(menu, animated: true)
+                    })
+                    
+                    // Botón invisible sobre la tarjeta (excepto sobre el botón de llamada)
+                    let btnCuerpo = UIButton(type: .custom)
+                    btnCuerpo.addAction(tapMenu, for: .touchUpInside)
+                    btnCuerpo.translatesAutoresizingMaskIntoConstraints = false
+                    tarjeta.addSubview(btnCuerpo)
+                    NSLayoutConstraint.activate([
+                        btnCuerpo.topAnchor.constraint(equalTo: tarjeta.topAnchor),
+                        btnCuerpo.bottomAnchor.constraint(equalTo: tarjeta.bottomAnchor),
+                        btnCuerpo.leadingAnchor.constraint(equalTo: tarjeta.leadingAnchor),
+                        btnCuerpo.trailingAnchor.constraint(equalTo: tarjeta.trailingAnchor, constant: -60)
+                    ])
+                    
+                    stackContactos.addArrangedSubview(tarjeta)
+                }
+            }
+        }
        
         let btnAdd = UIButton(type: .custom)
         btnAdd.backgroundColor = .systemRed
         btnAdd.setImage(UIImage(systemName: "plus"), for: .normal)
         btnAdd.tintColor = .white
         btnAdd.layer.cornerRadius = 28
-        btnAdd.layer.shadowColor = UIColor.black.cgColor
-        btnAdd.layer.shadowOpacity = 0.3
-        btnAdd.layer.shadowOffset = CGSize(width: 0, height: 4)
-        btnAdd.layer.shadowRadius = 5
         btnAdd.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnAdd)
+        
+        btnAdd.addAction(UIAction(handler: { _ in
+            self.mostrarVentanaFlotanteContacto(esEdicion: false, index: 0, alFinalizar: refrescarLista)
+        }), for: .touchUpInside)
        
         NSLayoutConstraint.activate([
             vistaHeader.topAnchor.constraint(equalTo: view.topAnchor),
@@ -589,19 +648,113 @@ class ViewController: UIViewController {
             btnBack.bottomAnchor.constraint(equalTo: vistaHeader.bottomAnchor, constant: -15),
             lblTitulo.centerYAnchor.constraint(equalTo: btnBack.centerYAnchor),
             lblTitulo.leadingAnchor.constraint(equalTo: btnBack.trailingAnchor, constant: 15),
-            imgVacia.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            imgVacia.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -20),
+            
+            scrollView.topAnchor.constraint(equalTo: vistaHeader.bottomAnchor, constant: 20),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            
+            stackContactos.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            stackContactos.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 20),
+            stackContactos.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -20),
+            stackContactos.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40),
+            
+            vistaVacia.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            vistaVacia.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             imgVacia.widthAnchor.constraint(equalToConstant: 100),
             imgVacia.heightAnchor.constraint(equalToConstant: 100),
-            lblMensaje.topAnchor.constraint(equalTo: imgVacia.bottomAnchor, constant: 20),
-            lblMensaje.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            lblSubMensaje.topAnchor.constraint(equalTo: lblMensaje.bottomAnchor, constant: 8),
-            lblSubMensaje.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            
             btnAdd.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -30),
             btnAdd.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
             btnAdd.widthAnchor.constraint(equalToConstant: 56),
             btnAdd.heightAnchor.constraint(equalToConstant: 56)
         ])
+        
+        refrescarLista()
+    }
+    
+    // Función centralizada para Agregar/Editar contacto con ADVERTENCIA DE 8 DÍGITOS
+    func mostrarVentanaFlotanteContacto(esEdicion: Bool, index: Int, alFinalizar: @escaping () -> Void) {
+        let titulo = esEdicion ? "Editar Contacto" : "Nuevo Contacto"
+        let msg = esEdicion ? "Modifica los datos" : "Añade nombre y teléfono"
+        let alert = UIAlertController(title: titulo, message: msg, preferredStyle: .alert)
+        
+        alert.addTextField { tf in
+            tf.placeholder = "Nombre"
+            if esEdicion { tf.text = self.listaContactos[index].nombre }
+        }
+        alert.addTextField { tf in
+            tf.placeholder = "Teléfono (8 dígitos)"
+            tf.keyboardType = .phonePad
+            if esEdicion { tf.text = self.listaContactos[index].telefono }
+        }
+        
+        let actionSave = UIAlertAction(title: "Guardar", style: .default) { _ in
+            let n = alert.textFields?[0].text ?? ""
+            let t = alert.textFields?[1].text ?? ""
+            
+            // --- REFUERZO DE SEGURIDAD ELVIS ---
+            let soloNums = t.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+            
+            // Si no tiene exactamente 8 dígitos, lanzamos advertencia y NO guardamos
+            if n.isEmpty || soloNums.count != 8 {
+                self.mostrarAlerta(titulo: "Formato Incorrecto", msj: "Debes ingresa un nombre e ingresa exactamente 8 dígitos numéricos.")
+                return
+            }
+            
+            // Formatear como xxxx-xxxx
+            let formatted = "\(soloNums.prefix(4))-\(soloNums.suffix(4))"
+            
+            if esEdicion {
+                self.listaContactos[index] = Contacto(nombre: n, telefono: formatted)
+            } else {
+                self.listaContactos.append(Contacto(nombre: n, telefono: formatted))
+            }
+            self.guardarContactos(self.listaContactos)
+            alFinalizar()
+        }
+        
+        alert.addAction(actionSave)
+        alert.addAction(UIAlertAction(title: "Cancelar", style: .cancel))
+        self.present(alert, animated: true)
+    }
+
+    func crearTarjetaContacto(c: Contacto) -> UIView {
+        let v = UIView()
+        v.backgroundColor = UIColor(red: 0.12, green: 0.12, blue: 0.18, alpha: 1.0)
+        v.layer.cornerRadius = 15
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.heightAnchor.constraint(equalToConstant: 80).isActive = true
+        
+        let icon = UIImageView(image: UIImage(systemName: "person.crop.square.fill"))
+        icon.tintColor = .systemRed
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        
+        let lbN = UILabel(); lbN.text = c.nombre; lbN.textColor = .white; lbN.font = .boldSystemFont(ofSize: 17)
+        let lbT = UILabel(); lbT.text = c.telefono; lbT.textColor = .lightGray; lbT.font = .systemFont(ofSize: 14)
+        let st = UIStackView(arrangedSubviews: [lbN, lbT]); st.axis = .vertical; st.spacing = 2; st.translatesAutoresizingMaskIntoConstraints = false
+        
+        let btnCall = UIButton(type: .system)
+        btnCall.backgroundColor = .systemGreen
+        btnCall.setImage(UIImage(systemName: "phone.fill"), for: .normal)
+        btnCall.tintColor = .white
+        btnCall.layer.cornerRadius = 20
+        btnCall.translatesAutoresizingMaskIntoConstraints = false
+        
+        v.addSubview(icon); v.addSubview(st); v.addSubview(btnCall)
+        NSLayoutConstraint.activate([
+            icon.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 15),
+            icon.centerYAnchor.constraint(equalTo: v.centerYAnchor),
+            icon.widthAnchor.constraint(equalToConstant: 45),
+            icon.heightAnchor.constraint(equalToConstant: 45),
+            st.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 12),
+            st.centerYAnchor.constraint(equalTo: v.centerYAnchor),
+            btnCall.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -15),
+            btnCall.centerYAnchor.constraint(equalTo: v.centerYAnchor),
+            btnCall.widthAnchor.constraint(equalToConstant: 40),
+            btnCall.heightAnchor.constraint(equalToConstant: 40)
+        ])
+        return v
     }
 
     func irAUbicacion() {
@@ -886,7 +1039,17 @@ class ViewController: UIViewController {
         ])
     }
 
-    // --- FUNCIONES AUXILIARES Y COMPONENTES (P3) ---
+    // --- PERSISTENCIA ---
+    func guardarContactos(_ c: [Contacto]) {
+        if let data = try? JSONEncoder().encode(c) { UserDefaults.standard.set(data, forKey: "MisContactosConfianza") }
+    }
+    
+    func cargarContactos() -> [Contacto] {
+        if let data = UserDefaults.standard.data(forKey: "MisContactosConfianza"), let decoded = try? JSONDecoder().decode([Contacto].self, from: data) { return decoded }
+        return []
+    }
+
+    // --- FUNCIONES AUXILIARES ---
 
     func cargarListaUsuarios() -> [Usuario] {
         if let data = UserDefaults.standard.data(forKey: "ListaUsuariosSIGMU"),
