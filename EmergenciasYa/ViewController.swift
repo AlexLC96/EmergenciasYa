@@ -363,58 +363,77 @@ class ViewController: UIViewController {
         ])
     }
 
+    // --- CORRECCIÓN VISUAL Y FUNCIONAL: NÚMEROS DE EMERGENCIA ---
     func irAEmergNums() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.98, alpha: 1.0)
-        let lblTitulo = UILabel()
-        lblTitulo.text = "Números de Emergencia"
-        lblTitulo.font = .systemFont(ofSize: 24, weight: .bold)
-        lblTitulo.textAlignment = .center
-        lblTitulo.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(lblTitulo)
-        let btnBack = UIButton(type: .system)
-        btnBack.setImage(UIImage(systemName: "chevron.left"), for: .normal)
-        btnBack.tintColor = .black
-        btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
-        btnBack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(btnBack)
-        let stackPrincipal = UIStackView()
-        stackPrincipal.axis = .vertical
-        stackPrincipal.spacing = 15
-        stackPrincipal.distribution = .fillEqually
-        stackPrincipal.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(stackPrincipal)
+        
+        let header = UIView(); header.backgroundColor = .white; header.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(header)
+        let btnB = UIButton(type: .system); btnB.setImage(UIImage(systemName: "chevron.left"), for: .normal); btnB.tintColor = .black; btnB.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside); btnB.translatesAutoresizingMaskIntoConstraints = false; header.addSubview(btnB)
+        let lblT = UILabel(); lblT.text = "Números de Emergencia"; lblT.font = .systemFont(ofSize: 22, weight: .bold); lblT.translatesAutoresizingMaskIntoConstraints = false; header.addSubview(lblT)
+
+        let scroll = UIScrollView(); scroll.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(scroll)
+        let stackP = UIStackView(); stackP.axis = .vertical; stackP.spacing = 15; stackP.translatesAutoresizingMaskIntoConstraints = false; scroll.addSubview(stackP)
+        
+        // --- NÚMEROS OFICIALES EL SALVADOR ---
         let filas = [
-            [("LogoPolicia", "PNC", UIColor(red: 0.82, green: 0.91, blue: 1.0, alpha: 1.0)),
-             ("LogoBomberos", "Bomberos", UIColor(red: 1.0, green: 0.85, blue: 0.85, alpha: 1.0))],
-            [("LogoCruzRoja", "Cruz Roja", UIColor(red: 1.0, green: 0.88, blue: 0.82, alpha: 1.0)),
-             ("LogoCruzVerde", "Cruz Verde", UIColor(red: 0.85, green: 0.95, blue: 0.85, alpha: 1.0))],
-            [("LogoSalvamento", "Comandos de Salvamento", UIColor(red: 1.0, green: 1.0, blue: 0.85, alpha: 1.0)),
-             ("LogoProtCivil", "Protección Civil", UIColor(red: 1.0, green: 0.92, blue: 0.8, alpha: 1.0))],
-            [("LogoAE", "AES", UIColor(red: 0.92, green: 0.88, blue: 1.0, alpha: 1.0)),
-             ("Logo123", "Sistema de Emergencias Médicas", UIColor(red: 0.85, green: 0.95, blue: 1.0, alpha: 1.0))]
+            [("LogoPolicia", "PNC", "911", UIColor(red: 0.85, green: 0.92, blue: 1.0, alpha: 1.0)),
+             ("LogoBomberos", "Bomberos", "913", UIColor(red: 1.0, green: 0.88, blue: 0.88, alpha: 1.0))],
+            [("LogoCruzRoja", "Cruz Roja", "2222-5155", UIColor(red: 1.0, green: 0.92, blue: 0.85, alpha: 1.0)),
+             ("LogoCruzVerde", "Cruz Verde", "2284-5792", UIColor(red: 0.88, green: 1.0, blue: 0.88, alpha: 1.0))],
+            [("LogoSalvamento", "Salvamento", "2133-0000", UIColor(red: 1.0, green: 1.0, blue: 0.9, alpha: 1.0)),
+             ("LogoProtCivil", "Prot. Civil", "2281-0888", UIColor(red: 0.95, green: 0.92, blue: 1.0, alpha: 1.0))],
+            [("LogoAE", "AES", "2506-9000", UIColor(red: 0.92, green: 0.95, blue: 1.0, alpha: 1.0)),
+             ("Logo123", "SEM / 132", "132", UIColor(red: 0.9, green: 0.9, blue: 0.95, alpha: 1.0))]
         ]
-        for datosFila in filas {
-            let stackH = UIStackView()
-            stackH.axis = .horizontal
-            stackH.spacing = 15
-            stackH.distribution = .fillEqually
-            for (img, txt, color) in datosFila {
-                let boton = crearCajonEmergencia(imagen: img, titulo: txt, fondo: color)
-                stackH.addArrangedSubview(boton)
+        
+        for f in filas {
+            let h = UIStackView(); h.axis = .horizontal; h.spacing = 15; h.distribution = .fillEqually
+            h.heightAnchor.constraint(equalToConstant: 140).isActive = true // Altura fija para evitar el encimado
+            for (img, txt, num, col) in f {
+                h.addArrangedSubview(crearCajonEmergencia(imagen: img, titulo: txt, numero: num, fondo: col))
             }
-            stackPrincipal.addArrangedSubview(stackH)
+            stackP.addArrangedSubview(h)
         }
+        
         NSLayoutConstraint.activate([
-            btnBack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
-            btnBack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            lblTitulo.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 50),
-            lblTitulo.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            stackPrincipal.topAnchor.constraint(equalTo: lblTitulo.bottomAnchor, constant: 30),
-            stackPrincipal.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            stackPrincipal.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            stackPrincipal.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40)
+            header.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor), header.leadingAnchor.constraint(equalTo: view.leadingAnchor), header.trailingAnchor.constraint(equalTo: view.trailingAnchor), header.heightAnchor.constraint(equalToConstant: 60),
+            btnB.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 15), btnB.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+            lblT.centerXAnchor.constraint(equalTo: header.centerXAnchor), lblT.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+            scroll.topAnchor.constraint(equalTo: header.bottomAnchor), scroll.leadingAnchor.constraint(equalTo: view.leadingAnchor), scroll.trailingAnchor.constraint(equalTo: view.trailingAnchor), scroll.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            stackP.topAnchor.constraint(equalTo: scroll.topAnchor, constant: 20), stackP.leadingAnchor.constraint(equalTo: scroll.leadingAnchor, constant: 20), stackP.trailingAnchor.constraint(equalTo: scroll.trailingAnchor, constant: -20), stackP.bottomAnchor.constraint(equalTo: scroll.bottomAnchor, constant: -20), stackP.widthAnchor.constraint(equalTo: scroll.widthAnchor, constant: -40)
         ])
+    }
+
+    func crearCajonEmergencia(imagen: String, titulo: String, numero: String, fondo: UIColor) -> UIView {
+        let v = UIView(); v.backgroundColor = fondo; v.layer.cornerRadius = 20; v.translatesAutoresizingMaskIntoConstraints = false
+        let img = UIImageView(image: UIImage(named: imagen)); img.contentMode = .scaleAspectFit; img.translatesAutoresizingMaskIntoConstraints = false; v.addSubview(img)
+        let lb = UILabel(); lb.text = titulo; lb.font = .systemFont(ofSize: 14, weight: .bold); lb.textAlignment = .center; lb.numberOfLines = 2; lb.translatesAutoresizingMaskIntoConstraints = false; v.addSubview(lb)
+        let btn = UIButton(type: .custom); btn.translatesAutoresizingMaskIntoConstraints = false; v.addSubview(btn)
+        
+        btn.addAction(UIAction(handler: { _ in
+            // ALERTA PERSONALIZADA SEGÚN EL NOMBRE SOLICITADO
+            let alert = UIAlertController(title: "¿Desea llamar a \(titulo)?", message: "Se marcará al número: \(numero)", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "Llamar", style: .default, handler: { _ in self.llamarNumero(num: numero) }))
+            alert.addAction(UIAlertAction(title: "Cancelar", style: .cancel))
+            self.present(alert, animated: true)
+        }), for: .touchUpInside)
+        
+        NSLayoutConstraint.activate([
+            img.centerXAnchor.constraint(equalTo: v.centerXAnchor), img.topAnchor.constraint(equalTo: v.topAnchor, constant: 20), img.widthAnchor.constraint(equalToConstant: 65), img.heightAnchor.constraint(equalToConstant: 65),
+            lb.topAnchor.constraint(equalTo: img.bottomAnchor, constant: 10), lb.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 5), lb.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -5),
+            btn.topAnchor.constraint(equalTo: v.topAnchor), btn.leadingAnchor.constraint(equalTo: v.leadingAnchor), btn.trailingAnchor.constraint(equalTo: v.trailingAnchor), btn.bottomAnchor.constraint(equalTo: v.bottomAnchor)
+        ])
+        return v
+    }
+
+    func llamarNumero(num: String) {
+        let clean = num.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        if let url = URL(string: "tel://\(clean)"), UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        } else {
+            self.mostrarAlerta(titulo: "Error", msj: "No se puede llamar desde este dispositivo.")
+        }
     }
 
     func irAFirstAid() {
@@ -526,7 +545,6 @@ class ViewController: UIViewController {
         ])
     }
 
-    // --- ACTUALIZACIÓN: CONTACTOS CON EDICIÓN, ELIMINACIÓN Y ADVERTENCIA DE 8 DÍGITOS ---
     func irAContactos() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.98, alpha: 1.0)
@@ -741,6 +759,11 @@ class ViewController: UIViewController {
         btnCall.layer.cornerRadius = 20
         btnCall.translatesAutoresizingMaskIntoConstraints = false
         
+        // --- LLAMADA A CONTACTO DE CONFIANZA ---
+        btnCall.addAction(UIAction(handler: { _ in
+            self.llamarNumero(num: c.telefono)
+        }), for: .touchUpInside)
+        
         v.addSubview(icon); v.addSubview(st); v.addSubview(btnCall)
         NSLayoutConstraint.activate([
             icon.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 15),
@@ -934,7 +957,8 @@ class ViewController: UIViewController {
             cardIncidente.topAnchor.constraint(equalTo: lblHistorial.bottomAnchor, constant: 15),
             cardIncidente.leadingAnchor.constraint(equalTo: stackCampos.leadingAnchor),
             cardIncidente.trailingAnchor.constraint(equalTo: stackCampos.trailingAnchor),
-            cardIncidente.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -20)
+            cardIncidente.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -20),
+            stackCampos.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40)
         ])
     }
 
@@ -1039,7 +1063,6 @@ class ViewController: UIViewController {
         ])
     }
 
-    // --- PERSISTENCIA ---
     func guardarContactos(_ c: [Contacto]) {
         if let data = try? JSONEncoder().encode(c) { UserDefaults.standard.set(data, forKey: "MisContactosConfianza") }
     }
@@ -1048,8 +1071,6 @@ class ViewController: UIViewController {
         if let data = UserDefaults.standard.data(forKey: "MisContactosConfianza"), let decoded = try? JSONDecoder().decode([Contacto].self, from: data) { return decoded }
         return []
     }
-
-    // --- FUNCIONES AUXILIARES ---
 
     func cargarListaUsuarios() -> [Usuario] {
         if let data = UserDefaults.standard.data(forKey: "ListaUsuariosSIGMU"),
@@ -1208,36 +1229,6 @@ class ViewController: UIViewController {
             lblU.bottomAnchor.constraint(equalTo: vista.bottomAnchor, constant: -15)
         ])
         return vista
-    }
-
-    func crearCajonEmergencia(imagen: String, titulo: String, fondo: UIColor) -> UIView {
-        let contenedor = UIView()
-        contenedor.backgroundColor = fondo
-        contenedor.layer.cornerRadius = 20
-        contenedor.layer.borderWidth = 1
-        contenedor.layer.borderColor = UIColor.black.withAlphaComponent(0.05).cgColor
-        let imgView = UIImageView(image: UIImage(named: imagen))
-        imgView.contentMode = .scaleAspectFit
-        imgView.translatesAutoresizingMaskIntoConstraints = false
-        let lbl = UILabel()
-        lbl.text = titulo
-        lbl.font = .systemFont(ofSize: 13, weight: .bold)
-        lbl.textAlignment = .center
-        lbl.numberOfLines = 2
-        lbl.translatesAutoresizingMaskIntoConstraints = false
-        contenedor.addSubview(imgView)
-        contenedor.addSubview(lbl)
-        NSLayoutConstraint.activate([
-            imgView.centerXAnchor.constraint(equalTo: contenedor.centerXAnchor),
-            imgView.topAnchor.constraint(equalTo: contenedor.topAnchor, constant: 20),
-            imgView.widthAnchor.constraint(equalTo: contenedor.widthAnchor, multiplier: 0.5),
-            imgView.heightAnchor.constraint(equalTo: imgView.widthAnchor),
-            lbl.topAnchor.constraint(equalTo: imgView.bottomAnchor, constant: 10),
-            lbl.leadingAnchor.constraint(equalTo: contenedor.leadingAnchor, constant: 10),
-            lbl.trailingAnchor.constraint(equalTo: contenedor.trailingAnchor, constant: -10),
-            lbl.bottomAnchor.constraint(lessThanOrEqualTo: contenedor.bottomAnchor, constant: -10)
-        ])
-        return contenedor
     }
 
     func crearEtiquetaSeccion(texto: String) -> UILabel {
