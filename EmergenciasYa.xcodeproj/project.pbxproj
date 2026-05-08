@@ -17,6 +17,7 @@
 		11E37A092F947CBC00B0102D /* EmergenciasYaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11E37A082F947CBC00B0102D /* EmergenciasYaTests.swift */; };
 		11E37A132F947CBC00B0102D /* EmergenciasYaUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11E37A122F947CBC00B0102D /* EmergenciasYaUITests.swift */; };
 		11E37A152F947CBC00B0102D /* EmergenciasYaUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11E37A142F947CBC00B0102D /* EmergenciasYaUITestsLaunchTests.swift */; };
+		209967982FAE558000BB3969 /* tone-evacuation.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 209967972FAE558000BB3969 /* tone-evacuation.mp3 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +52,7 @@
 		11E37A0E2F947CBC00B0102D /* EmergenciasYaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmergenciasYaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		11E37A122F947CBC00B0102D /* EmergenciasYaUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmergenciasYaUITests.swift; sourceTree = "<group>"; };
 		11E37A142F947CBC00B0102D /* EmergenciasYaUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmergenciasYaUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		209967972FAE558000BB3969 /* tone-evacuation.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "tone-evacuation.mp3"; path = "../../tone-evacuation.mp3"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,6 +103,7 @@
 		11E379ED2F947CBA00B0102D /* EmergenciasYa */ = {
 			isa = PBXGroup;
 			children = (
+				209967972FAE558000BB3969 /* tone-evacuation.mp3 */,
 				11E379EE2F947CBA00B0102D /* AppDelegate.swift */,
 				11E379F02F947CBA00B0102D /* SceneDelegate.swift */,
 				11E379F22F947CBA00B0102D /* ViewController.swift */,
@@ -237,6 +240,7 @@
 				11E379FB2F947CBB00B0102D /* Assets.xcassets in Resources */,
 				11E379FE2F947CBB00B0102D /* Base in Resources */,
 				11E379F62F947CBA00B0102D /* Base in Resources */,
+				209967982FAE558000BB3969 /* tone-evacuation.mp3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

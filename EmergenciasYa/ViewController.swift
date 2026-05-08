@@ -1,4 +1,5 @@
 import UIKit
+import AVFoundation
 
 class ViewController: UIViewController {
     
@@ -20,6 +21,14 @@ class ViewController: UIViewController {
     
     // Lista dinámica de contactos
     var listaContactos: [Contacto] = []
+    
+    // --- VARIABLES PARA LA ALARMA (Independientes) ---
+    var estaFlashActivo = false
+    var estaAlarmaSonoraActiva = false
+    var flashTimer: Timer?
+    
+    // Variable para el reproductor de audio
+    var audioPlayer: AVAudioPlayer?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -710,8 +719,6 @@ class ViewController: UIViewController {
         let actionSave = UIAlertAction(title: "Guardar", style: .default) { _ in
             let n = alert.textFields?[0].text ?? ""
             let t = alert.textFields?[1].text ?? ""
-            
-            // --- REFUERZO DE SEGURIDAD ELVIS ---
             let soloNums = t.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
             
             // Si no tiene exactamente 8 dígitos, lanzamos advertencia y NO guardamos
@@ -962,14 +969,17 @@ class ViewController: UIViewController {
         ])
     }
 
+    // --- INTEGRACIÓN: ALARMA DE BOLSILLO FUNCIONAL CON tone-evacuation.mp3 ---
     func irAAlarma() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = .white
+        
         let lblTitulo = UILabel()
         lblTitulo.text = "Alarma de Bolsillo"
         lblTitulo.font = .systemFont(ofSize: 28, weight: .bold)
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(lblTitulo)
+        
         let btnAlarmaCentral = UIButton(type: .custom)
         btnAlarmaCentral.setTitle("¡ALARMA!", for: .normal)
         btnAlarmaCentral.backgroundColor = .systemRed
@@ -977,6 +987,20 @@ class ViewController: UIViewController {
         btnAlarmaCentral.layer.cornerRadius = 100
         btnAlarmaCentral.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnAlarmaCentral)
+        
+        // Lógica del botón sonoro INDEPENDIENTE
+        btnAlarmaCentral.addAction(UIAction(handler: { _ in
+            self.estaAlarmaSonoraActiva.toggle()
+            btnAlarmaCentral.backgroundColor = self.estaAlarmaSonoraActiva ? .orange : .systemRed
+            btnAlarmaCentral.setTitle(self.estaAlarmaSonoraActiva ? "DETENER" : "¡ALARMA!", for: .normal)
+            
+            if self.estaAlarmaSonoraActiva {
+                self.reproducirSonido(nombre: "tone-evacuation")
+            } else {
+                self.audioPlayer?.stop()
+            }
+        }), for: .touchUpInside)
+        
         let btnFlash = UIButton(type: .system)
         btnFlash.setTitle("Activar Flash", for: .normal)
         btnFlash.backgroundColor = UIColor.systemBlue
@@ -984,6 +1008,22 @@ class ViewController: UIViewController {
         btnFlash.layer.cornerRadius = 15
         btnFlash.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnFlash)
+        
+        // Lógica del botón visual (Flash parpadeante independiente)
+        btnFlash.addAction(UIAction(handler: { _ in
+            self.estaFlashActivo.toggle()
+            btnFlash.setTitle(self.estaFlashActivo ? "Apagar Flash" : "Activar Flash", for: .normal)
+            btnFlash.backgroundColor = self.estaFlashActivo ? .darkGray : .systemBlue
+            
+            if self.estaFlashActivo {
+                self.flashTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { _ in self.toggleFlash() }
+            } else {
+                self.flashTimer?.invalidate()
+                self.flashTimer = nil
+                self.setFlash(on: false)
+            }
+        }), for: .touchUpInside)
+        
         let lblInfo = UILabel()
         lblInfo.text = "Presiona el botón para activar una alarma sonora.\nUsa el botón secundario para activar el flash\ncomo señal visual."
         lblInfo.numberOfLines = 0
@@ -992,12 +1032,14 @@ class ViewController: UIViewController {
         lblInfo.textColor = .gray
         lblInfo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(lblInfo)
+        
         let btnBack = UIButton(type: .system)
         btnBack.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         btnBack.tintColor = .black
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnBack)
+        
         NSLayoutConstraint.activate([
             btnBack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
             btnBack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
@@ -1009,11 +1051,35 @@ class ViewController: UIViewController {
             btnAlarmaCentral.heightAnchor.constraint(equalToConstant: 200),
             btnFlash.topAnchor.constraint(equalTo: btnAlarmaCentral.bottomAnchor, constant: 40),
             btnFlash.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            btnFlash.widthAnchor.constraint(equalToConstant: 120),
-            btnFlash.heightAnchor.constraint(equalToConstant: 40),
+            btnFlash.widthAnchor.constraint(equalToConstant: 160),
+            btnFlash.heightAnchor.constraint(equalToConstant: 45),
             lblInfo.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40),
             lblInfo.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ])
+    }
+
+    // Funciones auxiliares para el hardware y audio
+    func reproducirSonido(nombre: String) {
+        guard let url = Bundle.main.url(forResource: nombre, withExtension: "mp3") else { return }
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: url)
+            audioPlayer?.numberOfLoops = -1
+            audioPlayer?.play()
+        } catch { print("Error audio") }
+    }
+
+    func toggleFlash() {
+        guard let device = AVCaptureDevice.default(for: .video), device.hasTorch else { return }
+        try? device.lockForConfiguration()
+        device.torchMode = (device.torchMode == .on) ? .off : .on
+        device.unlockForConfiguration()
+    }
+    
+    func setFlash(on: Bool) {
+        guard let device = AVCaptureDevice.default(for: .video), device.hasTorch else { return }
+        try? device.lockForConfiguration()
+        device.torchMode = on ? .on : .off
+        device.unlockForConfiguration()
     }
 
     func irAConfig() {
