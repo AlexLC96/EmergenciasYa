@@ -1,7 +1,11 @@
 import UIKit
 import AVFoundation
+// PASO 1: Importar librerías de ubicación y mapas
+import CoreLocation
+import MapKit
 
-class ViewController: UIViewController {
+// PASO 2: Añadir los protocolos 'CLLocationManagerDelegate' y 'MKMapViewDelegate'
+class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDelegate {
     
     // --- ESTRUCTURAS ---
     struct Usuario: Codable {
@@ -29,9 +33,18 @@ class ViewController: UIViewController {
     
     // Variable para el reproductor de audio
     var audioPlayer: AVAudioPlayer?
+
+    // PASO 3: Variables para el gestor de ubicación y el Mapa
+    var locationManager: CLLocationManager?
+    var mapaUbicacion: MKMapView?
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        // --- ACTUALIZACIÓN: FORZAR MODO CLARO ---
+        if #available(iOS 13.0, *) {
+            self.overrideUserInterfaceStyle = .light
+        }
         
         // 1. Fondo blanco como tu mockup
         view.backgroundColor = .white
@@ -88,6 +101,7 @@ class ViewController: UIViewController {
         txtCorreo.placeholder = "Correo electrónico"
         txtCorreo.borderStyle = .roundedRect
         txtCorreo.translatesAutoresizingMaskIntoConstraints = false
+        txtCorreo.textColor = .black // Asegurar color en login
         view.addSubview(txtCorreo)
        
         // Actualizado: Ahora usa la función auxiliar para el botón de "ojo"
@@ -196,6 +210,7 @@ class ViewController: UIViewController {
         let lblTitulo = UILabel()
         lblTitulo.text = "Crear cuenta"
         lblTitulo.font = .systemFont(ofSize: 28, weight: .bold)
+        lblTitulo.textColor = .black
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(lblTitulo)
        
@@ -379,7 +394,7 @@ class ViewController: UIViewController {
         
         let header = UIView(); header.backgroundColor = .white; header.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(header)
         let btnB = UIButton(type: .system); btnB.setImage(UIImage(systemName: "chevron.left"), for: .normal); btnB.tintColor = .black; btnB.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside); btnB.translatesAutoresizingMaskIntoConstraints = false; header.addSubview(btnB)
-        let lblT = UILabel(); lblT.text = "Números de Emergencia"; lblT.font = .systemFont(ofSize: 22, weight: .bold); lblT.translatesAutoresizingMaskIntoConstraints = false; header.addSubview(lblT)
+        let lblT = UILabel(); lblT.text = "Números de Emergencia"; lblT.font = .systemFont(ofSize: 22, weight: .bold); lblT.textColor = .black; lblT.translatesAutoresizingMaskIntoConstraints = false; header.addSubview(lblT)
 
         let scroll = UIScrollView(); scroll.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(scroll)
         let stackP = UIStackView(); stackP.axis = .vertical; stackP.spacing = 15; stackP.translatesAutoresizingMaskIntoConstraints = false; scroll.addSubview(stackP)
@@ -417,7 +432,7 @@ class ViewController: UIViewController {
     func crearCajonEmergencia(imagen: String, titulo: String, numero: String, fondo: UIColor) -> UIView {
         let v = UIView(); v.backgroundColor = fondo; v.layer.cornerRadius = 20; v.translatesAutoresizingMaskIntoConstraints = false
         let img = UIImageView(image: UIImage(named: imagen)); img.contentMode = .scaleAspectFit; img.translatesAutoresizingMaskIntoConstraints = false; v.addSubview(img)
-        let lb = UILabel(); lb.text = titulo; lb.font = .systemFont(ofSize: 14, weight: .bold); lb.textAlignment = .center; lb.numberOfLines = 2; lb.translatesAutoresizingMaskIntoConstraints = false; v.addSubview(lb)
+        let lb = UILabel(); lb.text = titulo; lb.font = .systemFont(ofSize: 14, weight: .bold); lb.textColor = .black; lb.textAlignment = .center; lb.numberOfLines = 2; lb.translatesAutoresizingMaskIntoConstraints = false; v.addSubview(lb)
         let btn = UIButton(type: .custom); btn.translatesAutoresizingMaskIntoConstraints = false; v.addSubview(btn)
         
         btn.addAction(UIAction(handler: { _ in
@@ -479,6 +494,7 @@ class ViewController: UIViewController {
         let txtBuscar = UITextField()
         txtBuscar.placeholder = "Buscar una situación..."
         txtBuscar.backgroundColor = .white
+        txtBuscar.textColor = .black
         txtBuscar.borderStyle = .roundedRect
         txtBuscar.layer.cornerRadius = 10
         txtBuscar.translatesAutoresizingMaskIntoConstraints = false
@@ -790,88 +806,109 @@ class ViewController: UIViewController {
     func irAUbicacion() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = .white
+        
+        // PASO 4: Inicializar GPS y Mapa Real
+        locationManager = CLLocationManager()
+        locationManager?.delegate = self
+        locationManager?.requestWhenInUseAuthorization()
+        
+        mapaUbicacion = MKMapView()
+        mapaUbicacion?.delegate = self
+        mapaUbicacion?.showsUserLocation = true // Punto azul activo
+        mapaUbicacion?.mapType = .standard // Mapa de calles real
+        mapaUbicacion?.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(mapaUbicacion!)
        
         let vistaPanel = UIView()
         vistaPanel.backgroundColor = .white
         vistaPanel.layer.cornerRadius = 25
         vistaPanel.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-        vistaPanel.layer.shadowColor = UIColor.black.cgColor
-        vistaPanel.layer.shadowOpacity = 0.1
-        vistaPanel.layer.shadowOffset = CGSize(width: 0, height: -3)
-        vistaPanel.layer.shadowRadius = 10
         vistaPanel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(vistaPanel)
        
-        let vistaHeader = UIView()
-        vistaHeader.backgroundColor = .systemRed
-        vistaHeader.layer.cornerRadius = 25
-        vistaHeader.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-        vistaHeader.translatesAutoresizingMaskIntoConstraints = false
-        vistaPanel.addSubview(vistaHeader)
-       
         let btnBack = UIButton(type: .system)
         btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
-        btnBack.tintColor = .white
+        btnBack.tintColor = .systemRed
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
-        vistaHeader.addSubview(btnBack)
+        view.addSubview(btnBack)
        
         let lblTitulo = UILabel()
-        lblTitulo.text = "Compartir Ubicación"
-        lblTitulo.textColor = .white
+        lblTitulo.text = "Mi Ubicación Actual"
         lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
+        lblTitulo.textColor = .black
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
-        vistaHeader.addSubview(lblTitulo)
-       
-        let imgUbicacion = UIImageView(image: UIImage(systemName: "mappin.and.ellipse"))
-        imgUbicacion.tintColor = .systemRed
-        imgUbicacion.contentMode = .scaleAspectFit
-        imgUbicacion.translatesAutoresizingMaskIntoConstraints = false
-        vistaPanel.addSubview(imgUbicacion)
-       
-        let lblMensaje = UILabel()
-        lblMensaje.text = "Para enviar tu ubicación, presiona el botón de abajo."
-        lblMensaje.numberOfLines = 0
-        lblMensaje.textAlignment = .center
-        lblMensaje.font = .systemFont(ofSize: 16)
-        lblMensaje.textColor = .gray
-        lblMensaje.translatesAutoresizingMaskIntoConstraints = false
-        vistaPanel.addSubview(lblMensaje)
+        vistaPanel.addSubview(lblTitulo)
        
         let btnEnviar = UIButton(type: .system)
-        btnEnviar.setTitle("Enviar Ubicación Actual", for: .normal)
+        btnEnviar.setTitle("COMPARTIR CON CONTACTOS", for: .normal)
         btnEnviar.backgroundColor = .systemRed
         btnEnviar.setTitleColor(.white, for: .normal)
-        btnEnviar.titleLabel?.font = .systemFont(ofSize: 18, weight: .bold)
+        btnEnviar.titleLabel?.font = .systemFont(ofSize: 16, weight: .bold)
         btnEnviar.layer.cornerRadius = 25
         btnEnviar.translatesAutoresizingMaskIntoConstraints = false
         vistaPanel.addSubview(btnEnviar)
+        
+        // PASO 5: Acción de obtener GPS al presionar el botón (Optimizado para hilos)
+        btnEnviar.addAction(UIAction(handler: { _ in
+            DispatchQueue.global(qos: .userInitiated).async {
+                if CLLocationManager.locationServicesEnabled() {
+                    DispatchQueue.main.async {
+                        self.locationManager?.requestLocation()
+                        btnEnviar.setTitle("BUSCANDO...", for: .normal)
+                        // Forzamos actualización visual del mapa
+                        self.mapaUbicacion?.mapType = .standard
+                    }
+                }
+            }
+        }), for: .touchUpInside)
        
         NSLayoutConstraint.activate([
+            // Mapa ocupando la parte superior
+            mapaUbicacion!.topAnchor.constraint(equalTo: view.topAnchor),
+            mapaUbicacion!.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            mapaUbicacion!.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            mapaUbicacion!.bottomAnchor.constraint(equalTo: vistaPanel.topAnchor, constant: 25),
+            
+            // Panel blanco inferior
             vistaPanel.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             vistaPanel.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             vistaPanel.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            vistaPanel.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.45),
-            vistaHeader.topAnchor.constraint(equalTo: vistaPanel.topAnchor),
-            vistaHeader.leadingAnchor.constraint(equalTo: vistaPanel.leadingAnchor),
-            vistaHeader.trailingAnchor.constraint(equalTo: vistaPanel.trailingAnchor),
-            vistaHeader.heightAnchor.constraint(equalToConstant: 80),
-            btnBack.leadingAnchor.constraint(equalTo: vistaHeader.leadingAnchor, constant: 20),
-            btnBack.centerYAnchor.constraint(equalTo: vistaHeader.centerYAnchor),
-            lblTitulo.centerYAnchor.constraint(equalTo: btnBack.centerYAnchor),
-            lblTitulo.leadingAnchor.constraint(equalTo: btnBack.trailingAnchor, constant: 15),
-            imgUbicacion.centerXAnchor.constraint(equalTo: vistaPanel.centerXAnchor),
-            imgUbicacion.topAnchor.constraint(equalTo: vistaHeader.bottomAnchor, constant: 30),
-            imgUbicacion.widthAnchor.constraint(equalToConstant: 70),
-            imgUbicacion.heightAnchor.constraint(equalToConstant: 70),
-            lblMensaje.topAnchor.constraint(equalTo: imgUbicacion.bottomAnchor, constant: 20),
-            lblMensaje.leadingAnchor.constraint(equalTo: vistaPanel.leadingAnchor, constant: 40),
-            lblMensaje.trailingAnchor.constraint(equalTo: vistaPanel.trailingAnchor, constant: -40),
-            btnEnviar.bottomAnchor.constraint(equalTo: vistaPanel.bottomAnchor, constant: -40),
+            vistaPanel.heightAnchor.constraint(equalToConstant: 250),
+            
+            btnBack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
+            btnBack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            btnBack.widthAnchor.constraint(equalToConstant: 40),
+            btnBack.heightAnchor.constraint(equalToConstant: 40),
+            
+            lblTitulo.topAnchor.constraint(equalTo: vistaPanel.topAnchor, constant: 30),
+            lblTitulo.centerXAnchor.constraint(equalTo: vistaPanel.centerXAnchor),
+            
+            btnEnviar.bottomAnchor.constraint(equalTo: vistaPanel.bottomAnchor, constant: -50),
             btnEnviar.centerXAnchor.constraint(equalTo: vistaPanel.centerXAnchor),
-            btnEnviar.widthAnchor.constraint(equalTo: vistaPanel.widthAnchor, multiplier: 0.7),
+            btnEnviar.widthAnchor.constraint(equalToConstant: 280),
             btnEnviar.heightAnchor.constraint(equalToConstant: 55)
         ])
+    }
+
+    // PASO 6: Métodos del Mapa y GPS
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if let loc = locations.last {
+            // Zoom al punto azul
+            let region = MKCoordinateRegion(center: loc.coordinate, latitudinalMeters: 500, longitudinalMeters: 500)
+            mapaUbicacion?.setRegion(region, animated: true)
+            
+            // Restaurar texto del botón si existe
+            if let panel = view.subviews.first(where: { $0.layer.cornerRadius == 25 }),
+               let btn = panel.subviews.compactMap({ $0 as? UIButton }).first(where: { $0.titleLabel?.text == "BUSCANDO..." }) {
+                btn.setTitle("COMPARTIR CON CONTACTOS", for: .normal)
+                self.mostrarAlerta(titulo: "GPS Listo", msj: "Tu ubicación ha sido detectada con éxito.")
+            }
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("❌ Error de ubicación: \(error.localizedDescription)")
     }
 
     func irAIncidentes() {
@@ -937,6 +974,7 @@ class ViewController: UIViewController {
         let lblHistorial = UILabel()
         lblHistorial.text = "Incidentes recientes"
         lblHistorial.font = .systemFont(ofSize: 18, weight: .bold)
+        lblHistorial.textColor = .black
         lblHistorial.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(lblHistorial)
        
@@ -969,7 +1007,7 @@ class ViewController: UIViewController {
         ])
     }
 
-    // --- INTEGRACIÓN: ALARMA DE BOLSILLO FUNCIONAL CON tone-evacuation.mp3 ---
+    // --- ALARMA DE BOLSILLO FUNCIONAL CON tone-evacuation.mp3 ---
     func irAAlarma() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = .white
@@ -977,6 +1015,7 @@ class ViewController: UIViewController {
         let lblTitulo = UILabel()
         lblTitulo.text = "Alarma de Bolsillo"
         lblTitulo.font = .systemFont(ofSize: 28, weight: .bold)
+        lblTitulo.textColor = .black
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(lblTitulo)
         
@@ -1162,6 +1201,7 @@ class ViewController: UIViewController {
         t.placeholder = p
         t.borderStyle = .roundedRect
         t.font = .systemFont(ofSize: 16)
+        t.textColor = .black // Asegurar legibilidad en cualquier modo
         t.translatesAutoresizingMaskIntoConstraints = false
         t.heightAnchor.constraint(equalToConstant: 45).isActive = true
        
@@ -1196,6 +1236,7 @@ class ViewController: UIViewController {
         let lblTitulo = UILabel()
         lblTitulo.text = titulo
         lblTitulo.font = .systemFont(ofSize: 17, weight: .bold)
+        lblTitulo.textColor = .black // Forzar negro
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         let lblSub = UILabel()
         lblSub.text = subtitulo
@@ -1243,6 +1284,7 @@ class ViewController: UIViewController {
         let lblT = UILabel()
         lblT.text = titulo
         lblT.font = .systemFont(ofSize: 17, weight: .bold)
+        lblT.textColor = .black // Forzar negro
         lblT.translatesAutoresizingMaskIntoConstraints = false
         let lblD = UILabel()
         lblD.text = desc
@@ -1314,6 +1356,7 @@ class ViewController: UIViewController {
         let lblTitle = UILabel()
         lblTitle.text = titulo
         lblTitle.font = .systemFont(ofSize: 17)
+        lblTitle.textColor = .black // Forzar negro
         lblTitle.translatesAutoresizingMaskIntoConstraints = false
         let lblSub = UILabel()
         lblSub.text = subtitulo
@@ -1336,7 +1379,7 @@ class ViewController: UIViewController {
         ])
         return vista
     }
-   
+    
     func crearBotonOpcion(icono: String, titulo: String, colorIcono: UIColor) -> UIView {
         let contenedor = UIView()
         contenedor.backgroundColor = .white
@@ -1351,6 +1394,10 @@ class ViewController: UIViewController {
         let lbl = UILabel()
         lbl.text = titulo
         lbl.font = .systemFont(ofSize: 16, weight: .semibold)
+        
+        // --- ACTUALIZACIÓN: FORZAR COLOR NEGRO ---
+        lbl.textColor = .black
+        
         lbl.translatesAutoresizingMaskIntoConstraints = false
         contenedor.addSubview(imgView)
         contenedor.addSubview(lbl)
