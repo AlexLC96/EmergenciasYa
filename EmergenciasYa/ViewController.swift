@@ -4,8 +4,17 @@ import AVFoundation
 import CoreLocation
 import MapKit
 
+// --- NUEVA ESTRUCTURA PARA EL HISTORIAL ---
+struct RegistroEvento: Codable {
+    let titulo: String
+    let descripcion: String
+    let fecha: String
+    let ubicacion: String
+}
+
 // PASO 2: Añadir los protocolos 'CLLocationManagerDelegate' y 'MKMapViewDelegate'
-class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDelegate {
+// Agregamos UITableViewDataSource y Delegate para el módulo de incidentes
+class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDelegate, UITableViewDataSource, UITableViewDelegate {
     
     // --- ESTRUCTURAS ---
     struct Usuario: Codable {
@@ -26,9 +35,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
     // Lista dinámica de contactos
     var listaContactos: [Contacto] = []
     
+    // Variable para el historial de la tabla
+    var historialIncidentes: [RegistroEvento] = []
+    
     // --- VARIABLES PARA LA ALARMA (Independientes) ---
     var estaFlashActivo = false
-    var estaAlarmaSonoraActiva = false
+    var estaAlarmaSonoraActive = false
     var flashTimer: Timer?
     
     // Variable para el reproductor de audio
@@ -74,11 +86,50 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
             labelTitulo.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ])
         
-        // 5. ESPERAR 3 SEGUNDOS Y SALTAR AL LOGIN
+        // 5. ESPERAR 3 SEGUNDOS Y SALTAR AL LOGIN (O AL HOME SI HAY SESIÓN)
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            // RETOQUE: PERSISTENCIA DE SESIÓN
+            if let emailGuardado = UserDefaults.standard.string(forKey: "sesionActiva") {
+                let lista = self.cargarListaUsuarios()
+                if let userEncontrado = lista.first(where: { $0.correo == emailGuardado }) {
+                    self.usuarioLogueado = userEncontrado
+                    self.irAHome()
+                    return
+                }
+            }
             print("Queso, saltando al Login...")
             self.irALogin()
         }
+    }
+    
+    // --- LÓGICA DE LA CAJA NEGRA (CON LLAVES ÚNICAS POR USUARIO) ---
+    func registrarEventoAutomatico(titulo: String, desc: String) {
+        guard let correo = usuarioLogueado?.correo else { return }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy HH:mm"
+        let fechaActual = formatter.string(from: Date())
+        
+        let coords = locationManager?.location?.coordinate
+        let ubiTexto = coords != nil ? "\(String(format: "%.3f", coords!.latitude)), \(String(format: "%.3f", coords!.longitude))" : "Santa Ana, El Salvador"
+        
+        let nuevo = RegistroEvento(titulo: titulo, descripcion: desc, fecha: fechaActual, ubicacion: ubiTexto)
+        
+        var actuales = cargarIncidentesDeMemoria()
+        actuales.insert(nuevo, at: 0)
+        
+        if let data = try? JSONEncoder().encode(actuales) {
+            // RETOQUE: Llave personalizada por usuario
+            UserDefaults.standard.set(data, forKey: "Historial_\(correo)")
+        }
+    }
+    
+    func cargarIncidentesDeMemoria() -> [RegistroEvento] {
+        guard let correo = usuarioLogueado?.correo else { return [] }
+        if let data = UserDefaults.standard.data(forKey: "Historial_\(correo)"),
+           let decoded = try? JSONDecoder().decode([RegistroEvento].self, from: data) {
+            return decoded
+        }
+        return []
     }
     
     func irALogin() {
@@ -131,6 +182,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
             
             if let userEncontrado = lista.first(where: { $0.correo == email && $0.contrasena == pass }) {
                 self.usuarioLogueado = userEncontrado
+                // RETOQUE: GUARDAR SESIÓN
+                UserDefaults.standard.set(email, forKey: "sesionActiva")
                 self.irAHome()
             } else {
                 self.mostrarAlerta(titulo: "Error", msj: "Correo o contraseña incorrectos.")
@@ -194,6 +247,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
 
     @objc func accionHaciaUbicacion() {
         print("Navegando a Compartir Ubicación...")
+        // REGISTRO AUTOMÁTICO
+        registrarEventoAutomatico(titulo: "Ubicación Compartida", desc: "Se activó el módulo de compartir GPS.")
         irAUbicacion()
     }
 
@@ -261,12 +316,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
             }
         }), for: .touchUpInside)
        
-        let btnVolver = UIButton(type: .system)
-        btnVolver.setTitle("Ya tengo una cuenta", for: .normal)
-        btnVolver.setTitleColor(.black, for: .normal)
-        btnVolver.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(btnVolver)
-        btnVolver.addTarget(self, action: #selector(accionHaciaLogin), for: .touchUpInside)
+        let btnHaciaLogin = UIButton(type: .system)
+        btnHaciaLogin.setTitle("Ya tengo una cuenta", for: .normal)
+        btnHaciaLogin.setTitleColor(.black, for: .normal)
+        btnHaciaLogin.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(btnHaciaLogin)
+        btnHaciaLogin.addTarget(self, action: #selector(accionHaciaLogin), for: .touchUpInside)
        
         NSLayoutConstraint.activate([
             lblTitulo.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
@@ -278,8 +333,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
             btnRegistrar.leadingAnchor.constraint(equalTo: stackFields.leadingAnchor),
             btnRegistrar.trailingAnchor.constraint(equalTo: stackFields.trailingAnchor),
             btnRegistrar.heightAnchor.constraint(equalToConstant: 50),
-            btnVolver.topAnchor.constraint(equalTo: btnRegistrar.bottomAnchor, constant: 20),
-            btnVolver.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+            btnHaciaLogin.topAnchor.constraint(equalTo: btnRegistrar.bottomAnchor, constant: 20),
+            btnHaciaLogin.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ])
     }
     
@@ -316,7 +371,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         btnSOS.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnSOS)
         btnSOS.isUserInteractionEnabled = true
-        btnSOS.addTarget(self, action: #selector(accionHaciaAlarma), for: .touchUpInside)
+        
+        btnSOS.addAction(UIAction(handler: { _ in
+            // REGISTRO AUTOMÁTICO
+            self.registrarEventoAutomatico(titulo: "ALERTA SOS ACTIVADA", desc: "El usuario activó el botón de emergencia SOS.")
+            self.irAAlarma()
+        }), for: .touchUpInside)
        
         let btnSettings = UIButton(type: .system)
         btnSettings.setImage(UIImage(systemName: "gearshape.fill"), for: .normal)
@@ -377,8 +437,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
            
             btnSOS.topAnchor.constraint(equalTo: barraBienvenida.bottomAnchor, constant: 55),
             btnSOS.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            btnSOS.widthAnchor.constraint(equalToConstant: tamanoSOS),
-            btnSOS.heightAnchor.constraint(equalToConstant: tamanoSOS),
+            btnSOS.widthAnchor.constraint(equalToConstant: 180),
+            btnSOS.heightAnchor.constraint(equalToConstant: 180),
            
             stackOpciones.topAnchor.constraint(equalTo: btnSOS.bottomAnchor, constant: 40),
             stackOpciones.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 25),
@@ -399,7 +459,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         let scroll = UIScrollView(); scroll.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(scroll)
         let stackP = UIStackView(); stackP.axis = .vertical; stackP.spacing = 15; stackP.translatesAutoresizingMaskIntoConstraints = false; scroll.addSubview(stackP)
         
-        // --- NÚMEROS OFICIALES EL SALVADOR ---
         let filas = [
             [("LogoPolicia", "PNC", "911", UIColor(red: 0.85, green: 0.92, blue: 1.0, alpha: 1.0)),
              ("LogoBomberos", "Bomberos", "913", UIColor(red: 1.0, green: 0.88, blue: 0.88, alpha: 1.0))],
@@ -438,7 +497,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         btn.addAction(UIAction(handler: { _ in
             // ALERTA PERSONALIZADA SEGÚN EL NOMBRE SOLICITADO
             let alert = UIAlertController(title: "¿Desea llamar a \(titulo)?", message: "Se marcará al número: \(numero)", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "Llamar", style: .default, handler: { _ in self.llamarNumero(num: numero) }))
+            alert.addAction(UIAlertAction(title: "Llamar", style: .default, handler: { _ in
+                // RETOQUE: Registrar con nombre y número
+                self.llamarNumero(num: numero, nombre: titulo)
+            }))
             alert.addAction(UIAlertAction(title: "Cancelar", style: .cancel))
             self.present(alert, animated: true)
         }), for: .touchUpInside)
@@ -451,9 +513,11 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         return v
     }
 
-    func llamarNumero(num: String) {
+    func llamarNumero(num: String, nombre: String) {
         let clean = num.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
         if let url = URL(string: "tel://\(clean)"), UIApplication.shared.canOpenURL(url) {
+            // RETOQUE: Registro detallado
+            self.registrarEventoAutomatico(titulo: "Llamada Realizada", desc: "Se contactó a: \(nombre) (\(num))")
             UIApplication.shared.open(url)
         } else {
             self.mostrarAlerta(titulo: "Error", msj: "No se puede llamar desde este dispositivo.")
@@ -463,7 +527,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
     func irAFirstAid() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.97, alpha: 1.0)
-       
+        
         let todasLasGuias = [
             (i: "flame.fill", t: "Quemaduras", d: "1. Enfríe con agua fresca.\n2. Cubra con paño limpio.\n3. No use hielo."),
             (i: "heart.fill", t: "RCP Básica", d: "1. Llame al 123.\n2. Inicie compresiones rítmicas.\n3. No pare hasta que llegue ayuda."),
@@ -476,21 +540,21 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         vistaHeader.backgroundColor = .systemRed
         vistaHeader.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(vistaHeader)
-       
+        
         let btnBack = UIButton(type: .system)
         btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
         btnBack.tintColor = .white
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(btnBack)
-       
+        
         let lblTitulo = UILabel()
         lblTitulo.text = "Guía de Primeros Auxilios"
         lblTitulo.textColor = .white
         lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(lblTitulo)
-       
+        
         let txtBuscar = UITextField()
         txtBuscar.placeholder = "Buscar una situación..."
         txtBuscar.backgroundColor = .white
@@ -501,11 +565,11 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         txtBuscar.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 30, height: 20))
         txtBuscar.leftViewMode = .always
         view.addSubview(txtBuscar)
-       
+        
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
-       
+        
         let stackContenido = UIStackView()
         stackContenido.axis = .vertical
         stackContenido.spacing = 15
@@ -520,6 +584,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
                 
                 let btnAccion = UIButton(type: .custom)
                 btnAccion.addAction(UIAction(handler: { _ in
+                    self.registrarEventoAutomatico(titulo: "Guía Consultada", desc: "El usuario abrió el manual de: \(item.t)")
+                    
                     let alert = UIAlertController(title: item.t, message: item.d, preferredStyle: .alert)
                     alert.addAction(UIAlertAction(title: "Cerrar", style: .cancel))
                     self.present(alert, animated: true)
@@ -544,7 +610,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         }), for: .editingChanged)
         
         renderizar(lista: todasLasGuias)
-       
+        
         NSLayoutConstraint.activate([
             vistaHeader.topAnchor.constraint(equalTo: view.topAnchor),
             vistaHeader.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -573,7 +639,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
     func irAContactos() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.98, alpha: 1.0)
-       
+        
         // Cargar contactos guardados
         self.listaContactos = cargarContactos()
         
@@ -581,14 +647,14 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         vistaHeader.backgroundColor = .systemRed
         vistaHeader.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(vistaHeader)
-       
+        
         let btnBack = UIButton(type: .system)
         btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
         btnBack.tintColor = .white
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(btnBack)
-       
+        
         let lblTitulo = UILabel()
         lblTitulo.text = "Contactos de Confianza"
         lblTitulo.textColor = .white
@@ -599,13 +665,13 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
-       
+        
         let stackContactos = UIStackView()
         stackContactos.axis = .vertical
         stackContactos.spacing = 15
         stackContactos.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(stackContactos)
-       
+        
         let vistaVacia = UIStackView()
         vistaVacia.axis = .vertical
         vistaVacia.alignment = .center
@@ -669,7 +735,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
                 }
             }
         }
-       
+        
         let btnAdd = UIButton(type: .custom)
         btnAdd.backgroundColor = .systemRed
         btnAdd.setImage(UIImage(systemName: "plus"), for: .normal)
@@ -681,7 +747,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         btnAdd.addAction(UIAction(handler: { _ in
             self.mostrarVentanaFlotanteContacto(esEdicion: false, index: 0, alFinalizar: refrescarLista)
         }), for: .touchUpInside)
-       
+        
         NSLayoutConstraint.activate([
             vistaHeader.topAnchor.constraint(equalTo: view.topAnchor),
             vistaHeader.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -784,7 +850,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         
         // --- LLAMADA A CONTACTO DE CONFIANZA ---
         btnCall.addAction(UIAction(handler: { _ in
-            self.llamarNumero(num: c.telefono)
+            // RETOQUE: REGISTRAR CON NOMBRE Y NÚMERO
+            self.llamarNumero(num: c.telefono, nombre: c.nombre)
         }), for: .touchUpInside)
         
         v.addSubview(icon); v.addSubview(st); v.addSubview(btnCall)
@@ -818,28 +885,28 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         mapaUbicacion?.mapType = .standard // Mapa de calles real
         mapaUbicacion?.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(mapaUbicacion!)
-       
+        
         let vistaPanel = UIView()
         vistaPanel.backgroundColor = .white
         vistaPanel.layer.cornerRadius = 25
         vistaPanel.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
         vistaPanel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(vistaPanel)
-       
+        
         let btnBack = UIButton(type: .system)
         btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
         btnBack.tintColor = .systemRed
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(btnBack)
-       
+        
         let lblTitulo = UILabel()
         lblTitulo.text = "Mi Ubicación Actual"
         lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
         lblTitulo.textColor = .black
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         vistaPanel.addSubview(lblTitulo)
-       
+        
         let btnEnviar = UIButton(type: .system)
         btnEnviar.setTitle("COMPARTIR CON CONTACTOS", for: .normal)
         btnEnviar.backgroundColor = .systemRed
@@ -862,7 +929,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
                 }
             }
         }), for: .touchUpInside)
-       
+        
         NSLayoutConstraint.activate([
             // Mapa ocupando la parte superior
             mapaUbicacion!.topAnchor.constraint(equalTo: view.topAnchor),
@@ -898,11 +965,30 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
             let region = MKCoordinateRegion(center: loc.coordinate, latitudinalMeters: 500, longitudinalMeters: 500)
             mapaUbicacion?.setRegion(region, animated: true)
             
-            // Restaurar texto del botón si existe
-            if let panel = view.subviews.first(where: { $0.layer.cornerRadius == 25 }),
-               let btn = panel.subviews.compactMap({ $0 as? UIButton }).first(where: { $0.titleLabel?.text == "BUSCANDO..." }) {
-                btn.setTitle("COMPARTIR CON CONTACTOS", for: .normal)
-                self.mostrarAlerta(titulo: "GPS Listo", msj: "Tu ubicación ha sido detectada con éxito.")
+            // Buscamos el panel blanco inferior
+            if let panel = view.subviews.first(where: { $0.layer.cornerRadius == 25 }) {
+                
+                // Buscamos el botón que dice "BUSCANDO..." o "COMPARTIR CON CONTACTOS"
+                if let btnViejo = panel.subviews.compactMap({ $0 as? UIButton }).first(where: { $0.titleLabel?.text == "BUSCANDO..." || $0.titleLabel?.text == "COMPARTIR CON CONTACTOS" }) {
+                    
+                    // RETOQUE: En lugar de borrar la acción (que daba error),
+                    // simplemente le asignamos la nueva lógica de compartir directamente.
+                    btnViejo.setTitle("COMPARTIR UBICACIÓN", for: .normal)
+                    
+                    // Eliminamos cualquier objetivo previo para que no se dupliquen acciones
+                    btnViejo.removeTarget(nil, action: nil, for: .allEvents)
+                    
+                    // Agregamos la acción de compartir
+                    btnViejo.addAction(UIAction(handler: { _ in
+                        let lat = loc.coordinate.latitude
+                        let lon = loc.coordinate.longitude
+                        let msg = "¡Ayuda! Mi ubicación actual es: https://maps.apple.com/?ll=\(lat),\(lon)"
+                        let activityVC = UIActivityViewController(activityItems: [msg], applicationActivities: nil)
+                        self.present(activityVC, animated: true)
+                    }), for: .touchUpInside)
+                    
+                    self.mostrarAlerta(titulo: "GPS Listo", msj: "Tu ubicación ha sido detectada. Toca el botón para compartir.")
+                }
             }
         }
     }
@@ -911,100 +997,101 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         print("❌ Error de ubicación: \(error.localizedDescription)")
     }
 
+    // --- REGISTRO DE INCIDENTES (ACTUALIZADO SIN FANTASMA) ---
     func irAIncidentes() {
         view.subviews.forEach({ $0.removeFromSuperview() })
         view.backgroundColor = UIColor(white: 0.98, alpha: 1.0)
-       
+        
+        // CARGAR DATOS REALES (Sin el registro fantasma por defecto)
+        historialIncidentes = cargarIncidentesDeMemoria()
+        
         let vistaHeader = UIView()
         vistaHeader.backgroundColor = .systemRed
         vistaHeader.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(vistaHeader)
-       
+        
         let btnBack = UIButton(type: .system)
-        btnBack.setImage(UIImage(systemName: "arrow.left"), for: .normal)
+        btnBack.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         btnBack.tintColor = .white
         btnBack.addTarget(self, action: #selector(accionHaciaHome), for: .touchUpInside)
         btnBack.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(btnBack)
-       
+        
         let lblTitulo = UILabel()
         lblTitulo.text = "Registro de incidentes"
         lblTitulo.textColor = .white
-        lblTitulo.font = .systemFont(ofSize: 20, weight: .bold)
+        lblTitulo.font = .systemFont(ofSize: 22, weight: .bold)
         lblTitulo.translatesAutoresizingMaskIntoConstraints = false
         vistaHeader.addSubview(lblTitulo)
-       
-        let scrollView = UIScrollView()
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(scrollView)
-       
-        let stackCampos = UIStackView()
-        stackCampos.axis = .vertical
-        stackCampos.spacing = 15
-        stackCampos.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.addSubview(stackCampos)
-       
-        let txtTitulo = crearCampoTexto(p: "Título del incidente")
-        let txtUbi = crearCampoTexto(p: "Ubicación (opcional)")
-       
-        let txtDesc = UITextView()
-        txtDesc.text = "Descripción del incidente"
-        txtDesc.textColor = .lightGray
-        txtDesc.font = .systemFont(ofSize: 16)
-        txtDesc.layer.borderWidth = 1
-        txtDesc.layer.borderColor = UIColor.systemGray4.cgColor
-        txtDesc.layer.cornerRadius = 8
-        txtDesc.translatesAutoresizingMaskIntoConstraints = false
-        txtDesc.heightAnchor.constraint(equalToConstant: 100).isActive = true
-       
-        let btnGuardar = UIButton(type: .system)
-        btnGuardar.setTitle("Guardar incidente", for: .normal)
-        btnGuardar.backgroundColor = .systemRed
-        btnGuardar.setTitleColor(.white, for: .normal)
-        btnGuardar.titleLabel?.font = .systemFont(ofSize: 16, weight: .bold)
-        btnGuardar.layer.cornerRadius = 25
-        btnGuardar.translatesAutoresizingMaskIntoConstraints = false
-        btnGuardar.heightAnchor.constraint(equalToConstant: 50).isActive = true
-       
-        stackCampos.addArrangedSubview(txtTitulo)
-        stackCampos.addArrangedSubview(txtUbi)
-        stackCampos.addArrangedSubview(txtDesc)
-        stackCampos.addArrangedSubview(btnGuardar)
-       
-        let lblHistorial = UILabel()
-        lblHistorial.text = "Incidentes recientes"
-        lblHistorial.font = .systemFont(ofSize: 18, weight: .bold)
-        lblHistorial.textColor = .black
-        lblHistorial.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.addSubview(lblHistorial)
-       
-        let cardIncidente = crearTarjetaIncidente(titulo: "Incidente", desc: "Descripción", fecha: "18/02/2026 10:15", ubi: "Santa Ana")
-        scrollView.addSubview(cardIncidente)
-       
+        
+        // IMPLEMENTACIÓN DE TABLA REAL
+        let tabla = UITableView()
+        tabla.dataSource = self
+        tabla.delegate = self
+        tabla.backgroundColor = .clear
+        tabla.separatorStyle = .none
+        tabla.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(tabla)
+        
         NSLayoutConstraint.activate([
             vistaHeader.topAnchor.constraint(equalTo: view.topAnchor),
             vistaHeader.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             vistaHeader.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             vistaHeader.heightAnchor.constraint(equalToConstant: 110),
-            btnBack.leadingAnchor.constraint(equalTo: vistaHeader.leadingAnchor, constant: 20),
+            btnBack.leadingAnchor.constraint(equalTo: vistaHeader.leadingAnchor, constant: 15),
             btnBack.bottomAnchor.constraint(equalTo: vistaHeader.bottomAnchor, constant: -15),
+            lblTitulo.centerXAnchor.constraint(equalTo: vistaHeader.centerXAnchor),
             lblTitulo.centerYAnchor.constraint(equalTo: btnBack.centerYAnchor),
-            lblTitulo.leadingAnchor.constraint(equalTo: btnBack.trailingAnchor, constant: 15),
-            scrollView.topAnchor.constraint(equalTo: vistaHeader.bottomAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            stackCampos.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 20),
-            stackCampos.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            stackCampos.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            lblHistorial.topAnchor.constraint(equalTo: stackCampos.bottomAnchor, constant: 30),
-            lblHistorial.leadingAnchor.constraint(equalTo: stackCampos.leadingAnchor),
-            cardIncidente.topAnchor.constraint(equalTo: lblHistorial.bottomAnchor, constant: 15),
-            cardIncidente.leadingAnchor.constraint(equalTo: stackCampos.leadingAnchor),
-            cardIncidente.trailingAnchor.constraint(equalTo: stackCampos.trailingAnchor),
-            cardIncidente.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -20),
-            stackCampos.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40)
+            tabla.topAnchor.constraint(equalTo: vistaHeader.bottomAnchor, constant: 10),
+            tabla.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tabla.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tabla.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+    }
+    
+    // --- PROTOCOLOS DE TABLA PARA REGISTROS ---
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int { return historialIncidentes.count }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let celda = UITableViewCell(); celda.backgroundColor = .clear; celda.selectionStyle = .none
+        let dato = historialIncidentes[indexPath.row]
+        let tarjeta = crearTarjetaIncidente(titulo: dato.titulo, desc: dato.descripcion, fecha: dato.fecha, ubi: dato.ubicacion)
+        
+        // --- ACTUALIZACIÓN: LÓGICA DEL BOTÓN DE ELIMINAR ---
+        let btnTrash = UIButton(type: .system)
+        btnTrash.setImage(UIImage(systemName: "trash"), for: .normal)
+        btnTrash.tintColor = .systemRed
+        btnTrash.tag = indexPath.row // Guardamos el índice
+        btnTrash.addTarget(self, action: #selector(confirmarEliminacion(sender:)), for: .touchUpInside)
+        btnTrash.translatesAutoresizingMaskIntoConstraints = false
+        tarjeta.addSubview(btnTrash)
+        
+        celda.contentView.addSubview(tarjeta)
+        NSLayoutConstraint.activate([
+            tarjeta.topAnchor.constraint(equalTo: celda.contentView.topAnchor, constant: 10),
+            tarjeta.leadingAnchor.constraint(equalTo: celda.contentView.leadingAnchor, constant: 20),
+            tarjeta.trailingAnchor.constraint(equalTo: celda.contentView.trailingAnchor, constant: -20),
+            tarjeta.bottomAnchor.constraint(equalTo: celda.contentView.bottomAnchor, constant: -10),
+            btnTrash.trailingAnchor.constraint(equalTo: tarjeta.trailingAnchor, constant: -15),
+            btnTrash.topAnchor.constraint(equalTo: tarjeta.topAnchor, constant: 15),
+            btnTrash.widthAnchor.constraint(equalToConstant: 30),
+            btnTrash.heightAnchor.constraint(equalToConstant: 30)
+        ])
+        return celda
+    }
+
+    @objc func confirmarEliminacion(sender: UIButton) {
+        let alerta = UIAlertController(title: "¿Eliminar Registro?", message: "¿Estás seguro de que deseas borrar este incidente del historial? Esta acción no se puede deshacer.", preferredStyle: .alert)
+        alerta.addAction(UIAlertAction(title: "Eliminar", style: .destructive, handler: { _ in
+            self.historialIncidentes.remove(at: sender.tag)
+            // RETOQUE: Guardar con la llave del usuario logueado
+            guard let correo = self.usuarioLogueado?.correo else { return }
+            if let data = try? JSONEncoder().encode(self.historialIncidentes) {
+                UserDefaults.standard.set(data, forKey: "Historial_\(correo)")
+            }
+            self.irAIncidentes() // Refrescar pantalla
+        }))
+        alerta.addAction(UIAlertAction(title: "Cancelar", style: .cancel))
+        self.present(alerta, animated: true)
     }
 
     // --- ALARMA DE BOLSILLO FUNCIONAL CON tone-evacuation.mp3 ---
@@ -1029,11 +1116,11 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         
         // Lógica del botón sonoro INDEPENDIENTE
         btnAlarmaCentral.addAction(UIAction(handler: { _ in
-            self.estaAlarmaSonoraActiva.toggle()
-            btnAlarmaCentral.backgroundColor = self.estaAlarmaSonoraActiva ? .orange : .systemRed
-            btnAlarmaCentral.setTitle(self.estaAlarmaSonoraActiva ? "DETENER" : "¡ALARMA!", for: .normal)
+            self.estaAlarmaSonoraActive.toggle()
+            btnAlarmaCentral.backgroundColor = self.estaAlarmaSonoraActive ? .orange : .systemRed
+            btnAlarmaCentral.setTitle(self.estaAlarmaSonoraActive ? "DETENER" : "¡ALARMA!", for: .normal)
             
-            if self.estaAlarmaSonoraActiva {
+            if self.estaAlarmaSonoraActive {
                 self.reproducirSonido(nombre: "tone-evacuation")
             } else {
                 self.audioPlayer?.stop()
@@ -1147,11 +1234,17 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         view.addSubview(stackPrincipal)
         stackPrincipal.addArrangedSubview(crearEtiquetaSeccion(texto: "General"))
         stackPrincipal.addArrangedSubview(crearFilaConfig(icono: "globe", titulo: "Idioma", subtitulo: "Español"))
+        
         let btnLogout = UIButton(type: .system)
         btnLogout.setTitle("Cerrar sesión", for: .normal)
         btnLogout.setTitleColor(.systemRed, for: .normal)
         btnLogout.contentHorizontalAlignment = .left
-        btnLogout.addTarget(self, action: #selector(accionHaciaLogin), for: .touchUpInside)
+        
+        btnLogout.addAction(UIAction(handler: { _ in
+            UserDefaults.standard.removeObject(forKey: "sesionActiva")
+            self.irALogin()
+        }), for: .touchUpInside)
+        
         stackPrincipal.addArrangedSubview(btnLogout)
         NSLayoutConstraint.activate([
             vistaHeader.topAnchor.constraint(equalTo: view.topAnchor),
@@ -1169,11 +1262,20 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
     }
 
     func guardarContactos(_ c: [Contacto]) {
-        if let data = try? JSONEncoder().encode(c) { UserDefaults.standard.set(data, forKey: "MisContactosConfianza") }
+        guard let correo = usuarioLogueado?.correo else { return }
+        if let data = try? JSONEncoder().encode(c) {
+            // RETOQUE: Llave única para contactos
+            UserDefaults.standard.set(data, forKey: "Contactos_\(correo)")
+        }
     }
     
     func cargarContactos() -> [Contacto] {
-        if let data = UserDefaults.standard.data(forKey: "MisContactosConfianza"), let decoded = try? JSONDecoder().decode([Contacto].self, from: data) { return decoded }
+        guard let correo = usuarioLogueado?.correo else { return [] }
+        // RETOQUE: Leer de llave única
+        if let data = UserDefaults.standard.data(forKey: "Contactos_\(correo)"),
+           let decoded = try? JSONDecoder().decode([Contacto].self, from: data) {
+            return decoded
+        }
         return []
     }
 
@@ -1204,7 +1306,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         t.textColor = .black // Asegurar legibilidad en cualquier modo
         t.translatesAutoresizingMaskIntoConstraints = false
         t.heightAnchor.constraint(equalToConstant: 45).isActive = true
-       
+        
         if esSeguro {
             t.isSecureTextEntry = true
             let btnOjo = UIButton(type: .custom)
@@ -1304,17 +1406,14 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         lblU.font = .systemFont(ofSize: 13)
         lblU.textColor = .darkGray
         lblU.translatesAutoresizingMaskIntoConstraints = false
-        let btnTrash = UIButton(type: .system)
-        btnTrash.setImage(UIImage(systemName: "trash"), for: .normal)
-        btnTrash.tintColor = .systemRed
-        btnTrash.translatesAutoresizingMaskIntoConstraints = false
+        
         vista.addSubview(icono)
         vista.addSubview(lblT)
         vista.addSubview(lblD)
         vista.addSubview(separador)
         vista.addSubview(lblF)
         vista.addSubview(lblU)
-        vista.addSubview(btnTrash)
+        
         NSLayoutConstraint.activate([
             icono.leadingAnchor.constraint(equalTo: vista.leadingAnchor, constant: 15),
             icono.topAnchor.constraint(equalTo: vista.topAnchor, constant: 15),
@@ -1322,8 +1421,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
             icono.heightAnchor.constraint(equalToConstant: 40),
             lblT.leadingAnchor.constraint(equalTo: icono.trailingAnchor, constant: 12),
             lblT.topAnchor.constraint(equalTo: icono.topAnchor),
-            btnTrash.trailingAnchor.constraint(equalTo: vista.trailingAnchor, constant: -15),
-            btnTrash.centerYAnchor.constraint(equalTo: lblT.centerYAnchor),
             lblD.leadingAnchor.constraint(equalTo: lblT.leadingAnchor),
             lblD.topAnchor.constraint(equalTo: lblT.bottomAnchor, constant: 2),
             separador.topAnchor.constraint(equalTo: icono.bottomAnchor, constant: 15),
